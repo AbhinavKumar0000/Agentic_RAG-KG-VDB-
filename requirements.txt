@@ -1,0 +1,14 @@
+flask
+python-dotenv
+langchain
+langchain-community
+langchain-openai
+langchain-postgres
+langgraph
+neo4j
+pandas
+plotly
+networkx
+pypdf
+psycopg2-binary
+tiktoken
