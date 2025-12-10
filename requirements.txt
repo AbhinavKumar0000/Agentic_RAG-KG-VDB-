@@ -12,3 +12,4 @@ networkx
 pypdf
 psycopg2-binary
 tiktoken
+langchain-experimental

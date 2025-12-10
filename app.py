@@ -1,9 +1,13 @@
 from flask import Flask, request, jsonify, render_template
 from werkzeug.utils import secure_filename
 import os
-from agent import app_agent, vector_store, graph
+import threading
+from agent import app_agent, vector_store, graph, llm
 from visualizer import generate_3d_graph, generate_2d_graph
 from langchain_core.documents import Document
+from langchain_community.document_loaders import PyPDFLoader, TextLoader
+from langchain_text_splitters import RecursiveCharacterTextSplitter
+from langchain_experimental.graph_transformers import LLMGraphTransformer
 
 app = Flask(__name__)
 UPLOAD_FOLDER = 'uploads'
@@ -32,6 +36,31 @@ def chat():
         "tool": result.get('tool_used', 'Unknown')
     })
 
+def process_graph_background(splits, user_id, filename):
+    print(f"Background: Extracting graph data for {user_id}...")
+    try:
+        llm_transformer = LLMGraphTransformer(llm=llm)
+        graph_documents = llm_transformer.convert_to_graph_documents(splits)
+        
+        # Add user_id to all nodes to support multi-tenancy/filtering
+        for doc in graph_documents:
+            for node in doc.nodes:
+                node.properties["user_id"] = user_id
+                
+        graph.add_graph_documents(graph_documents)
+        
+        # Manually link documents to the user for visualization entry point
+        # We can use a simple Cypher query to link the source documents to the User
+        cypher_query = """
+        MERGE (u:User {id: $uid})
+        MERGE (d:Document {name: $fname})
+        MERGE (u)-[:UPLOADED]->(d)
+        """
+        graph.query(cypher_query, params={"uid": user_id, "fname": filename})
+        print(f"Background: Graph extraction complete for {filename}")
+    except Exception as e:
+        print(f"Background: Graph extraction failed: {e}")
+
 @app.route('/upload', methods=['POST'])
 def upload_file():
     user_id = request.headers.get('X-User-ID')
@@ -40,29 +69,34 @@ def upload_file():
         
     file = request.files['file']
     filename = secure_filename(file.filename)
-    file.save(os.path.join(UPLOAD_FOLDER, filename))
+    file_path = os.path.join(UPLOAD_FOLDER, filename)
+    file.save(file_path)
     
-    # 1. Postgres Ingestion
-    content = f"Content of {filename}. This file is about AI and Graphs."
-    doc = Document(page_content=content, metadata={"user_id": user_id, "source": filename})
-    vector_store.add_documents([doc])
+    # 1. Read File
+    if filename.endswith('.pdf'):
+        loader = PyPDFLoader(file_path)
+        docs = loader.load()
+    else:
+        loader = TextLoader(file_path)
+        docs = loader.load()
+        
+    # 2. Chunking
+    text_splitter = RecursiveCharacterTextSplitter(chunk_size=1000, chunk_overlap=200)
+    splits = text_splitter.split_documents(docs)
     
-    # 2. Neo4j Ingestion (FIXED: Creates CONNECTIONS now)
-    # We explicitly link the Document to the User so the visualizer has an edge to find.
-    print(f"Ingesting graph data for {user_id}...")
-    
-    cypher_query = """
-    MERGE (u:User {id: $uid})
-    MERGE (d:Document {name: $fname, user_id: $uid})
-    MERGE (u)-[:UPLOADED]->(d)
-    MERGE (c:Concept {name: 'AI', user_id: $uid})
-    MERGE (d)-[:MENTIONS]->(c)
-    MERGE (c2:Concept {name: 'GraphRAG', user_id: $uid})
-    MERGE (d)-[:USES]->(c2)
-    """
-    graph.query(cypher_query, params={"uid": user_id, "fname": filename})
+    # Add metadata
+    for split in splits:
+        split.metadata["user_id"] = user_id
+        split.metadata["source"] = filename
 
-    return jsonify({"message": f"Processed {filename}. Added to Postgres & Neo4j."})
+    # 3. Postgres Ingestion (Vector)
+    vector_store.add_documents(splits)
+    
+    # 4. Neo4j Ingestion (Graph) - Run in background
+    thread = threading.Thread(target=process_graph_background, args=(splits, user_id, filename))
+    thread.start()
+
+    return jsonify({"message": f"Processed {filename}. Vector ingestion done. Graph extraction started in background."})
 
 @app.route('/visualize/<mode>')
 def visualize(mode):
