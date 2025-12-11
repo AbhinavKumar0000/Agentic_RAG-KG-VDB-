@@ -1,382 +1,283 @@
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Agentic RAG Explorer</title>
-    <style>
-        /* --- DARK THEME CSS --- */
-        body { 
-            background-color: #121212; 
-            color: #e0e0e0; 
-            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; 
-            display: flex; 
-            height: 100vh; 
-            margin: 0; 
-            overflow: hidden;
-        }
-
-        /* Sidebar Styling */
-        .sidebar { 
-            width: 280px; 
-            background: #1e1e1e; 
-            padding: 20px; 
-            border-right: 1px solid #333; 
-            display: flex;
-            flex-direction: column;
-            box-shadow: 2px 0 5px rgba(0,0,0,0.5);
-        }
-
-        .sidebar h2 { color: #00d4ff; margin-bottom: 5px; font-size: 1.4rem; }
-        .sidebar p { font-size: 0.9rem; color: #888; margin-bottom: 20px; }
-        
-        .user-badge {
-            background: #333;
-            padding: 10px;
-            border-radius: 8px;
-            margin-bottom: 20px;
-            border: 1px solid #444;
-            font-size: 0.9rem;
-            color: #00ff9d;
-        }
-
-        hr { border: 0; border-top: 1px solid #333; margin: 20px 0; width: 100%; }
-
-        h3 { color: #bbb; font-size: 1rem; margin-bottom: 10px; text-transform: uppercase; letter-spacing: 1px; }
-
-        /* Buttons & Inputs */
-        input[type="file"] {
-            margin-bottom: 10px;
-            color: #ccc;
-            font-size: 0.9rem;
-        }
-        
-        button { 
-            padding: 12px; 
-            cursor: pointer; 
-            color: white; 
-            border: none; 
-            border-radius: 6px; 
-            font-weight: bold;
-            transition: opacity 0.2s;
-            margin-bottom: 10px;
-            width: 100%;
-        }
-        button:hover { opacity: 0.9; }
-
-        .btn-upload { background: #007bff; }
-        .btn-3d { background: #9c27b0; }
-        .btn-2d { background: #009688; }
-
-        /* Main Chat Area */
-        .main { 
-            flex: 1; 
-            display: flex; 
-            flex-direction: column; 
-            padding: 20px; 
-            background-color: #121212;
-        }
-
-        .chat-box { 
-            flex: 1; 
-            background: #1a1a1a; 
-            border-radius: 12px; 
-            overflow-y: auto; 
-            padding: 20px; 
-            margin-bottom: 20px; 
-            border: 1px solid #333;
-            box-shadow: inset 0 0 10px rgba(0,0,0,0.5);
-        }
-
-        .input-area { display: flex; gap: 10px; }
-        
-        input[type="text"] { 
-            flex: 1; 
-            padding: 15px; 
-            border-radius: 8px; 
-            border: 1px solid #444; 
-            background: #252525; 
-            color: white; 
-            font-size: 1rem;
-        }
-        input[type="text"]:focus { outline: 1px solid #00d4ff; }
-
-        .btn-send { width: auto; background: #00d4ff; color: #000; margin-bottom: 0; }
-
-        /* Messages */
-        .message { 
-            margin-bottom: 15px; 
-            padding: 12px 16px; 
-            border-radius: 8px; 
-            max-width: 80%; 
-            line-height: 1.5;
-            position: relative;
-            animation: fadeIn 0.3s ease;
-        }
-        @keyframes fadeIn { from { opacity: 0; transform: translateY(5px); } to { opacity: 1; transform: translateY(0); } }
-
-        .user { 
-            background: #2b5c8a; 
-            align-self: flex-end; 
-            margin-left: auto; 
-            border-bottom-right-radius: 2px;
-        }
-        
-        .bot { 
-            background: #2d2d2d; 
-            align-self: flex-start; 
-            border-bottom-left-radius: 2px;
-            border: 1px solid #444;
-        }
-
-        .tool-badge {
-            display: inline-block;
-            font-size: 0.75rem;
-            background: #444;
-            padding: 2px 6px;
-            border-radius: 4px;
-            color: #00d4ff;
-            margin-left: 8px;
-            border: 1px solid #555;
-            vertical-align: middle;
-        }
-
-        /* Modal (Graph Viewer) */
-        .modal { 
-            display: none; 
-            position: fixed; 
-            top: 0; left: 0; 
-            width: 100%; height: 100%; 
-            background: rgba(0,0,0,0.85); 
-            z-index: 1000; 
-            backdrop-filter: blur(5px);
-        }
-        .modal-content { 
-            width: 90%; 
-            height: 90%; 
-            margin: 2.5% auto; 
-            background: #000;
-            border-radius: 8px;
-            overflow: hidden;
-            position: relative;
-            box-shadow: 0 0 20px rgba(0, 212, 255, 0.2);
-        }
-        #graph-frame { width: 100%; height: 100%; border: none; }
-        .close-btn { 
-            position: absolute; 
-            top: 15px; right: 25px; 
-            color: white; 
-            font-size: 35px; 
-            cursor: pointer; 
-            z-index: 1010;
-            background: rgba(0,0,0,0.5);
-            padding: 0 10px;
-            border-radius: 5px;
-        }
-        .close-btn:hover { color: #ff4444; background: rgba(255,255,255,0.1); }
-
-    </style>
+    <title>Cortex</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+    <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
 </head>
-<body>
 
-<div class="sidebar">
-    <h2>RAG Explorer</h2>
-    <p>Agentic Vector + Graph Search</p>
-    
-    <div class="user-badge">
-        User: <strong id="username-display">Guest</strong>
+<body>
+    <div class="flash-container" id="flashContainer"></div>
+
+    <div class="app-container">
+        <!-- Sidebar -->
+        <aside class="sidebar glass-panel">
+            <div class="brand">Cortex<span class="brand-highlight">RAG</span></div>
+
+            <div class="control-section">
+                <div class="section-label">Data Source</div>
+                <div class="file-input-wrapper">
+                    <label for="fileInput" class="file-label" id="fileName">Select Document</label>
+                    <input type="file" id="fileInput" onchange="updateFileName()" hidden>
+                </div>
+                <button class="btn" id="uploadBtn" onclick="uploadFile()">
+                    Process Data
+                </button>
+            </div>
+
+            <div class="control-section">
+                <div class="section-label">Visualization</div>
+                <button class="btn btn-secondary" onclick="showGraph('3d')">
+                    View 3D Graph
+                </button>
+                <button class="btn btn-secondary" onclick="showGraph('2d')">
+                    View 2D Network
+                </button>
+            </div>
+
+            <button class="btn btn-danger" onclick="resetDatabase()">
+                Reset System
+            </button>
+        </aside>
+
+        <!-- Main Chat -->
+        <main class="main-content glass-panel">
+            <div class="loading-overlay" id="loadingOverlay">
+                <div class="spinner"></div>
+                <div class="loading-text" id="statusText">Processing...</div>
+                <button class="btn btn-danger" onclick="cancelLoading()"
+                    style="margin-top: 20px; padding: 6px 12px; font-size: 12px;">Cancel</button>
+            </div>
+
+            <div class="chat-area" id="chatBox">
+                <div class="message bot">
+                    Welcome to Cortex. Upload a document to begin analysis.
+                </div>
+            </div>
+
+            <div class="input-bar">
+                <input type="text" class="text-input" id="userInput" placeholder="Ask a question..."
+                    onkeypress="handleEnter(event)">
+                <button class="btn" onclick="sendMessage()" style="padding: 10px 14px;">Send</button>
+            </div>
+        </main>
     </div>
 
-    <hr>
-    
-    <h3>1. Ingest Data</h3>
-    <input type="file" id="fileInput">
-    <button class="btn-upload" onclick="uploadFile()">Upload & Index</button>
-    <div id="uploadStatus" style="font-size: 0.8rem; color: #888; margin-top: 5px;"></div>
-
-    <br>
-    
-    <h3>2. Visualize Graph</h3>
-    <button class="btn-3d" onclick="showGraph('3d')">View 3D Graph (Plotly)</button>
-    <button class="btn-2d" onclick="showGraph('2d')">View 2D Graph (PyVis)</button>
-</div>
-
-<div class="main">
-    <div class="chat-box" id="chatBox">
-        <div class="message bot">
-            Hello! I am your <strong>Agentic RAG</strong> assistant.<br>
-            I can switch between <em>Vector Search</em> (for content) and <em>Graph Search</em> (for connections).<br>
-            Upload a file to get started!
+    <!-- Graph Modal -->
+    <div id="graphModal" class="modal">
+        <div class="close-modal" onclick="closeGraph()">×</div>
+        <div class="modal-content">
+            <iframe id="graph-frame" src=""></iframe>
         </div>
     </div>
-    
-    <div class="input-area">
-        <input type="text" id="userInput" placeholder="Ask about your documents (e.g., 'Who is connected to AI?')" onkeypress="handleEnter(event)">
-        <button class="btn-send" onclick="sendMessage()">Send</button>
-    </div>
-</div>
 
-<div id="graphModal" class="modal">
-    <div class="modal-content">
-        <span class="close-btn" onclick="closeGraph()">&times;</span>
-        <iframe id="graph-frame" src=""></iframe>
-    </div>
-</div>
-
-<script>
-    // --- 1. SESSION MANAGEMENT ---
-    let username = localStorage.getItem("rag_username");
-    if (!username) {
-        // Generate random user ID if none exists
-        username = "User_" + Math.floor(1000 + Math.random() * 9000);
-        localStorage.setItem("rag_username", username);
-    }
-    document.getElementById("username-display").innerText = username;
-
-    // --- 2. CHAT LOGIC ---
-    async function sendMessage() {
-        const input = document.getElementById("userInput");
-        const text = input.value.trim();
-        if (!text) return;
-
-        // Add User Message
-        addMessage(text, "user");
-        input.value = ""; // Clear input
-
-        // Show loading state (optional)
-        const loadingId = addMessage("Thinking...", "bot", false, true);
-
-        try {
-            const response = await fetch("/chat", {
-                method: "POST",
-                headers: { 
-                    "Content-Type": "application/json",
-                    "X-User-ID": username 
-                },
-                body: JSON.stringify({ message: text })
-            });
-
-            if (!response.ok) throw new Error("Network response was not ok");
-            
-            const data = await response.json();
-            
-            // Remove loading message
-            removeMessage(loadingId);
-
-            // Create Tool Badge
-            const tool = data.tool || "General";
-            const toolBadge = `<span class="tool-badge">[Tool: ${tool}]</span>`;
-            
-            // Add Bot Response
-            addMessage(data.response + toolBadge, "bot", true);
-
-        } catch (e) {
-            removeMessage(loadingId);
-            addMessage("Error connecting to the agent. Is the server running?", "bot");
-            console.error(e);
-        }
-    }
-
-    // --- 3. UPLOAD LOGIC ---
-    async function uploadFile() {
-        const fileInput = document.getElementById("fileInput");
-        const statusDiv = document.getElementById("uploadStatus");
-        const file = fileInput.files[0];
-
-        if (!file) {
-            alert("Please select a file first.");
-            return;
+    <script>
+        // --- Session Management ---
+        let username = localStorage.getItem("rag_username");
+        if (!username) {
+            username = "User_" + Math.floor(1000 + Math.random() * 9000);
+            localStorage.setItem("rag_username", username);
         }
 
-        statusDiv.innerText = "Uploading & Indexing...";
-        statusDiv.style.color = "#ffeb3b"; // Yellow status
+        // --- UI Interactions ---
+        function updateFileName() {
+            const file = document.getElementById("fileInput").files[0];
+            if (file) document.getElementById("fileName").innerText = file.name;
+        }
 
-        const formData = new FormData();
-        formData.append("file", file);
+        function showFlash(message, type = 'info') {
+            const container = document.getElementById('flashContainer');
+            const flash = document.createElement('div');
+            flash.className = `flash-message ${type}`;
+            flash.innerText = message;
+            container.appendChild(flash);
+            setTimeout(() => {
+                flash.style.opacity = '0';
+                flash.style.transform = 'translateX(20px)';
+                setTimeout(() => flash.remove(), 300);
+            }, 3000);
+        }
 
-        try {
-            const res = await fetch("/upload", {
-                method: "POST",
-                headers: { "X-User-ID": username },
-                body: formData
-            });
-            const data = await res.json();
-            
-            if(res.ok) {
-                statusDiv.innerText = "Success! Data added to Graph & Vector DB.";
-                statusDiv.style.color = "#00ff9d"; // Green status
-                addMessage(`File '${file.name}' processed successfully.`, "bot");
-            } else {
-                statusDiv.innerText = "Error: " + data.error;
-                statusDiv.style.color = "#ff4444";
+        // --- Polling Logic ---
+        let pollInterval = null;
+        let idleCount = 0;
+
+        function startPolling() {
+            if (pollInterval) clearInterval(pollInterval);
+            const overlay = document.getElementById("loadingOverlay");
+            const statusText = document.getElementById("statusText");
+            overlay.style.display = "flex";
+            idleCount = 0;
+
+            pollInterval = setInterval(async () => {
+                try {
+                    const res = await fetch("/status", { headers: { "X-User-ID": username } });
+                    const data = await res.json();
+                    statusText.innerText = data.status;
+
+                    if (data.status === "Graph Ready" || data.status.startsWith("Error")) {
+                        clearInterval(pollInterval);
+                        pollInterval = null;
+                        setTimeout(() => {
+                            overlay.style.display = "none";
+                            if (data.status === "Graph Ready") {
+                                showFlash("Processing Complete", "success");
+                                addMessage("Knowledge graph constructed. Ready for queries.", "bot");
+                            } else {
+                                showFlash(data.status, "error");
+                                addMessage(data.status, "bot");
+                            }
+                            resetUploadBtn();
+                        }, 800);
+                    } else if (data.status === "Idle") {
+                        idleCount++;
+                        if (idleCount > 10) {
+                            clearInterval(pollInterval);
+                            pollInterval = null;
+                            overlay.style.display = "none";
+                            showFlash("Connection Timeout", "error");
+                            resetUploadBtn();
+                        }
+                    } else {
+                        idleCount = 0;
+                    }
+                } catch (e) {
+                    console.error(e);
+                }
+            }, 1000);
+        }
+
+        function cancelLoading() {
+            if (pollInterval) clearInterval(pollInterval);
+            pollInterval = null;
+            document.getElementById("loadingOverlay").style.display = "none";
+            resetUploadBtn();
+            showFlash("Cancelled", "info");
+        }
+
+        function resetUploadBtn() {
+            const btn = document.getElementById("uploadBtn");
+            btn.disabled = false;
+            btn.innerText = "Process Data";
+        }
+
+        // --- API Actions ---
+        async function uploadFile() {
+            const fileInput = document.getElementById("fileInput");
+            const file = fileInput.files[0];
+            if (!file) return showFlash("Select a document first", "error");
+
+            const btn = document.getElementById("uploadBtn");
+            btn.disabled = true;
+            btn.innerText = "Processing...";
+
+            const formData = new FormData();
+            formData.append("file", file);
+
+            startPolling();
+
+            try {
+                const res = await fetch("/upload", {
+                    method: "POST",
+                    headers: { "X-User-ID": username },
+                    body: formData
+                });
+                if (!res.ok) throw new Error("Upload failed");
+            } catch (e) {
+                showFlash(e.message, "error");
+                cancelLoading();
             }
-        } catch (e) {
-            statusDiv.innerText = "Upload failed.";
-            statusDiv.style.color = "#ff4444";
         }
-    }
 
-    // --- 4. VISUALIZATION LOGIC ---
-    async function showGraph(mode) {
-        // mode is '2d' or '3d'
-        const modal = document.getElementById("graphModal");
-        const iframe = document.getElementById("graph-frame");
+        async function resetDatabase() {
+            if (!confirm("Reset the entire knowledge base?")) return;
+            try {
+                await fetch("/reset", {
+                    method: "POST",
+                    headers: { "X-User-ID": username }
+                });
+                showFlash("System Reset", "success");
+                addMessage("System memory cleared.", "bot");
+            } catch (e) {
+                showFlash("Reset Failed", "error");
+            }
+        }
 
-        try {
-            const res = await fetch(`/visualize/${mode}`, {
-                headers: { "X-User-ID": username }
-            });
-            
-            if (res.status === 404) {
-                alert("No graph data found! Please upload a file first.");
-                return;
+        async function sendMessage() {
+            const input = document.getElementById("userInput");
+            const text = input.value.trim();
+            if (!text) return;
+
+            addMessage(text, "user");
+            input.value = "";
+
+            // Thinking Indicator
+            const thinkingId = addMessage("Thinking...", "bot", false, true);
+
+            try {
+                const res = await fetch("/chat", {
+                    method: "POST",
+                    headers: { "Content-Type": "application/json", "X-User-ID": username },
+                    body: JSON.stringify({ message: text })
+                });
+                const data = await res.json();
+
+                document.getElementById(thinkingId).remove();
+                addMessage(marked.parse(data.response), "bot", true, data.tool);
+            } catch (e) {
+                document.getElementById(thinkingId).remove();
+                showFlash("Network Error", "error");
+                addMessage("Unable to process request.", "bot");
+            }
+        }
+
+        // --- Graph Visualization ---
+        async function showGraph(mode) {
+            try {
+                const res = await fetch(`/visualize/${mode}`, { headers: { "X-User-ID": username } });
+                if (res.status === 404) return showFlash("No data available", "error");
+
+                const data = await res.json();
+                const iframe = document.getElementById("graph-frame");
+                iframe.src = data.url + "?t=" + Date.now();
+                document.getElementById("graphModal").style.display = "flex";
+            } catch (e) {
+                showFlash("Visualization Error", "error");
+            }
+        }
+
+        function closeGraph() {
+            document.getElementById("graphModal").style.display = "none";
+            document.getElementById("graph-frame").src = "";
+        }
+
+        // --- Chat Utils ---
+        function addMessage(text, sender, isHtml = false, tool = null) {
+            const div = document.createElement("div");
+            div.className = `message ${sender}`;
+            if (tool === true) div.id = "temp-" + Date.now(); // Temp message flag hack
+
+            let content = text;
+            if (tool && tool !== true) {
+                content += ` <span style="font-size:10px; opacity:0.7; margin-left:8px; border:1px solid rgba(255,255,255,0.2); padding:2px 6px; border-radius:4px;">${tool}</span>`;
             }
 
-            const data = await res.json();
-            
-            if (data.url) {
-                // Force iframe reload by appending timestamp
-                iframe.src = data.url + "?t=" + new Date().getTime();
-                modal.style.display = "block";
-            } else {
-                alert("Unknown error loading graph.");
-            }
+            if (isHtml || tool) div.innerHTML = content;
+            else div.innerText = content;
 
-        } catch (e) {
-            console.error(e);
-            alert("Failed to load visualization.");
+            const box = document.getElementById("chatBox");
+            box.appendChild(div);
+            box.scrollTop = box.scrollHeight;
+            return div.id;
         }
-    }
 
-    function closeGraph() {
-        document.getElementById("graphModal").style.display = "none";
-        document.getElementById("graph-frame").src = ""; // Stop processing
-    }
-
-    // --- 5. HELPER FUNCTIONS ---
-    function handleEnter(e) {
-        if (e.key === "Enter") sendMessage();
-    }
-
-    function addMessage(text, sender, isHtml=false, isTemp=false) {
-        const div = document.createElement("div");
-        div.className = `message ${sender}`;
-        if (isTemp) div.id = "temp-loading";
-        
-        if (isHtml) div.innerHTML = text;
-        else div.innerText = text;
-        
-        const chatBox = document.getElementById("chatBox");
-        chatBox.appendChild(div);
-        chatBox.scrollTop = chatBox.scrollHeight; // Auto scroll to bottom
-        return div.id;
-    }
-
-    function removeMessage(id) {
-        const el = document.getElementById(id);
-        if (el) el.remove();
-    }
-</script>
-
+        function handleEnter(e) {
+            if (e.key === "Enter") sendMessage();
+        }
+    </script>
 </body>
+
 </html>

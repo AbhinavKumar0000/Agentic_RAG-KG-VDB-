@@ -108,7 +108,8 @@ def generate_2d_graph(user_id):
         net.add_node(node, label=attrs.get('text', 'Node'), title=group, color=color)
 
     for source, target, attrs in G.edges(data=True):
-        net.add_edge(source, target, color="#555555")
+        # Pass the label attribute to show relationship type
+        net.add_edge(source, target, color="#555555", label=attrs.get('label', ''))
 
     # Physics for cool effect
     net.force_atlas_2based()

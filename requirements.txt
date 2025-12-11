@@ -13,3 +13,4 @@ pypdf
 psycopg2-binary
 tiktoken
 langchain-experimental
+langchain-google-genai

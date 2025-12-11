@@ -35,6 +35,7 @@ vector_store = PGVector(
     collection_name="rag_docs",
     connection=CONNECTION_STRING,
     use_jsonb=True,
+    engine_args={"pool_pre_ping": True},
 )
 
 class AgentState(TypedDict):
