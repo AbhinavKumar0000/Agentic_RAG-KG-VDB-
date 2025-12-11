@@ -13,7 +13,6 @@ app = Flask(__name__)
 UPLOAD_FOLDER = 'uploads'
 os.makedirs(UPLOAD_FOLDER, exist_ok=True)
 
-# Global status tracker
 processing_status = {}
 
 @app.route('/')
@@ -103,11 +102,9 @@ def upload_file():
     text_splitter = RecursiveCharacterTextSplitter(chunk_size=1000, chunk_overlap=200)
     splits = text_splitter.split_documents(docs)
     
-    # Sanitize content to remove NUL characters (Postgres text fields don't support them)
     for split in splits:
         split.page_content = split.page_content.replace('\x00', '')
     
-    # Add metadata
     for split in splits:
         split.metadata["user_id"] = user_id
         split.metadata["source"] = filename

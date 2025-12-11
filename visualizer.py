@@ -18,8 +18,7 @@ def get_graph_data(user_id):
     driver = GraphDatabase.driver(URI, auth=AUTH)
     G = nx.DiGraph()
 
-    # Query: Fetch ANY node connected to the user, or created by the user
-    # We look for nodes tagged with user_id OR connected to the User node
+
     query = """
     MATCH (n)-[r]->(m) 
     WHERE n.user_id = $uid OR m.user_id = $uid
@@ -39,7 +38,6 @@ def get_graph_data(user_id):
             s_label = list(source.labels)[0] if source.labels else "Node"
             t_label = list(target.labels)[0] if target.labels else "Node"
             
-            # Use 'name' or 'id' property, fallback to label
             s_text = source.get('name') or source.get('id') or s_label
             t_text = target.get('name') or target.get('id') or t_label
 
@@ -101,17 +99,14 @@ def generate_2d_graph(user_id):
 
     net = Network(height="700px", width="100%", bgcolor="#222222", font_color="white", cdn_resources='remote')
     
-    # Convert NetworkX to PyVis
     for node, attrs in G.nodes(data=True):
         group = attrs.get('group', 'DEFAULT')
         color = COLOR_MAP.get(group, "#ffffff")
         net.add_node(node, label=attrs.get('text', 'Node'), title=group, color=color)
 
     for source, target, attrs in G.edges(data=True):
-        # Pass the label attribute to show relationship type
         net.add_edge(source, target, color="#555555", label=attrs.get('label', ''))
 
-    # Physics for cool effect
     net.force_atlas_2based()
     
     filename = f"graph_2d_{user_id}.html"

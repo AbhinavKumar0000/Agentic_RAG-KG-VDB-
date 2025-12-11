@@ -3,7 +3,6 @@ from typing import TypedDict
 from langgraph.graph import StateGraph, END
 from langchain_google_genai import ChatGoogleGenerativeAI, GoogleGenerativeAIEmbeddings
 
-# FIXED IMPORT: Use langchain_neo4j if available, else fallback
 try:
     from langchain_neo4j import Neo4jGraph, Neo4jVector
 except ImportError:
@@ -26,8 +25,6 @@ graph = Neo4jGraph(
 )
 
 # Connect to Vector
-# Note: For simple local testing without pgvector setup, you can use FAISS/Chroma
-# But assuming you have Postgres running:
 from langchain_postgres import PGVector
 CONNECTION_STRING = os.getenv("POSTGRES_CONNECTION", "postgresql+psycopg2://postgres:password@localhost:5432/postgres")
 vector_store = PGVector(
@@ -43,7 +40,7 @@ class AgentState(TypedDict):
     context: str
     answer: str
     user_id: str
-    tool_used: str  # <--- Added this to track the tool
+    tool_used: str 
 
 def router(state: AgentState):
     print(f"--- ROUTING: {state['question']} ---")
@@ -63,9 +60,7 @@ def vector_retrieval(state: AgentState):
 def graph_retrieval(state: AgentState):
     print(f"--- GRAPH SEARCH ---")
     try:
-        # Simple constrained retrieval for demo
         chain = GraphCypherQAChain.from_llm(llm, graph=graph, allow_dangerous_requests=True, verbose=True)
-        # Inject filter into query
         q = f"{state['question']} (Limit to nodes with user_id='{state['user_id']}')"
         res = chain.invoke(q)
         return {"context": res['result'], "tool_used": "Graph Cypher"}

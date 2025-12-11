@@ -1,0 +1,453 @@
+<html>
+    <head>
+        <meta charset="utf-8">
+        
+            <script>function neighbourhoodHighlight(params) {
+  // console.log("in nieghbourhoodhighlight");
+  allNodes = nodes.get({ returnType: "Object" });
+  // originalNodes = JSON.parse(JSON.stringify(allNodes));
+  // if something is selected:
+  if (params.nodes.length > 0) {
+    highlightActive = true;
+    var i, j;
+    var selectedNode = params.nodes[0];
+    var degrees = 2;
+
+    // mark all nodes as hard to read.
+    for (let nodeId in allNodes) {
+      // nodeColors[nodeId] = allNodes[nodeId].color;
+      allNodes[nodeId].color = "rgba(200,200,200,0.5)";
+      if (allNodes[nodeId].hiddenLabel === undefined) {
+        allNodes[nodeId].hiddenLabel = allNodes[nodeId].label;
+        allNodes[nodeId].label = undefined;
+      }
+    }
+    var connectedNodes = network.getConnectedNodes(selectedNode);
+    var allConnectedNodes = [];
+
+    // get the second degree nodes
+    for (i = 1; i < degrees; i++) {
+      for (j = 0; j < connectedNodes.length; j++) {
+        allConnectedNodes = allConnectedNodes.concat(
+          network.getConnectedNodes(connectedNodes[j])
+        );
+      }
+    }
+
+    // all second degree nodes get a different color and their label back
+    for (i = 0; i < allConnectedNodes.length; i++) {
+      // allNodes[allConnectedNodes[i]].color = "pink";
+      allNodes[allConnectedNodes[i]].color = "rgba(150,150,150,0.75)";
+      if (allNodes[allConnectedNodes[i]].hiddenLabel !== undefined) {
+        allNodes[allConnectedNodes[i]].label =
+          allNodes[allConnectedNodes[i]].hiddenLabel;
+        allNodes[allConnectedNodes[i]].hiddenLabel = undefined;
+      }
+    }
+
+    // all first degree nodes get their own color and their label back
+    for (i = 0; i < connectedNodes.length; i++) {
+      // allNodes[connectedNodes[i]].color = undefined;
+      allNodes[connectedNodes[i]].color = nodeColors[connectedNodes[i]];
+      if (allNodes[connectedNodes[i]].hiddenLabel !== undefined) {
+        allNodes[connectedNodes[i]].label =
+          allNodes[connectedNodes[i]].hiddenLabel;
+        allNodes[connectedNodes[i]].hiddenLabel = undefined;
+      }
+    }
+
+    // the main node gets its own color and its label back.
+    // allNodes[selectedNode].color = undefined;
+    allNodes[selectedNode].color = nodeColors[selectedNode];
+    if (allNodes[selectedNode].hiddenLabel !== undefined) {
+      allNodes[selectedNode].label = allNodes[selectedNode].hiddenLabel;
+      allNodes[selectedNode].hiddenLabel = undefined;
+    }
+  } else if (highlightActive === true) {
+    // console.log("highlightActive was true");
+    // reset all nodes
+    for (let nodeId in allNodes) {
+      // allNodes[nodeId].color = "purple";
+      allNodes[nodeId].color = nodeColors[nodeId];
+      // delete allNodes[nodeId].color;
+      if (allNodes[nodeId].hiddenLabel !== undefined) {
+        allNodes[nodeId].label = allNodes[nodeId].hiddenLabel;
+        allNodes[nodeId].hiddenLabel = undefined;
+      }
+    }
+    highlightActive = false;
+  }
+
+  // transform the object into an array
+  var updateArray = [];
+  if (params.nodes.length > 0) {
+    for (let nodeId in allNodes) {
+      if (allNodes.hasOwnProperty(nodeId)) {
+        // console.log(allNodes[nodeId]);
+        updateArray.push(allNodes[nodeId]);
+      }
+    }
+    nodes.update(updateArray);
+  } else {
+    // console.log("Nothing was selected");
+    for (let nodeId in allNodes) {
+      if (allNodes.hasOwnProperty(nodeId)) {
+        // console.log(allNodes[nodeId]);
+        // allNodes[nodeId].color = {};
+        updateArray.push(allNodes[nodeId]);
+      }
+    }
+    nodes.update(updateArray);
+  }
+}
+
+function filterHighlight(params) {
+  allNodes = nodes.get({ returnType: "Object" });
+  // if something is selected:
+  if (params.nodes.length > 0) {
+    filterActive = true;
+    let selectedNodes = params.nodes;
+
+    // hiding all nodes and saving the label
+    for (let nodeId in allNodes) {
+      allNodes[nodeId].hidden = true;
+      if (allNodes[nodeId].savedLabel === undefined) {
+        allNodes[nodeId].savedLabel = allNodes[nodeId].label;
+        allNodes[nodeId].label = undefined;
+      }
+    }
+
+    for (let i=0; i < selectedNodes.length; i++) {
+      allNodes[selectedNodes[i]].hidden = false;
+      if (allNodes[selectedNodes[i]].savedLabel !== undefined) {
+        allNodes[selectedNodes[i]].label = allNodes[selectedNodes[i]].savedLabel;
+        allNodes[selectedNodes[i]].savedLabel = undefined;
+      }
+    }
+
+  } else if (filterActive === true) {
+    // reset all nodes
+    for (let nodeId in allNodes) {
+      allNodes[nodeId].hidden = false;
+      if (allNodes[nodeId].savedLabel !== undefined) {
+        allNodes[nodeId].label = allNodes[nodeId].savedLabel;
+        allNodes[nodeId].savedLabel = undefined;
+      }
+    }
+    filterActive = false;
+  }
+
+  // transform the object into an array
+  var updateArray = [];
+  if (params.nodes.length > 0) {
+    for (let nodeId in allNodes) {
+      if (allNodes.hasOwnProperty(nodeId)) {
+        updateArray.push(allNodes[nodeId]);
+      }
+    }
+    nodes.update(updateArray);
+  } else {
+    for (let nodeId in allNodes) {
+      if (allNodes.hasOwnProperty(nodeId)) {
+        updateArray.push(allNodes[nodeId]);
+      }
+    }
+    nodes.update(updateArray);
+  }
+}
+
+function selectNode(nodes) {
+  network.selectNodes(nodes);
+  neighbourhoodHighlight({ nodes: nodes });
+  return nodes;
+}
+
+function selectNodes(nodes) {
+  network.selectNodes(nodes);
+  filterHighlight({nodes: nodes});
+  return nodes;
+}
+
+function highlightFilter(filter) {
+  let selectedNodes = []
+  let selectedProp = filter['property']
+  if (filter['item'] === 'node') {
+    let allNodes = nodes.get({ returnType: "Object" });
+    for (let nodeId in allNodes) {
+      if (allNodes[nodeId][selectedProp] && filter['value'].includes((allNodes[nodeId][selectedProp]).toString())) {
+        selectedNodes.push(nodeId)
+      }
+    }
+  }
+  else if (filter['item'] === 'edge'){
+    let allEdges = edges.get({returnType: 'object'});
+    // check if the selected property exists for selected edge and select the nodes connected to the edge
+    for (let edge in allEdges) {
+      if (allEdges[edge][selectedProp] && filter['value'].includes((allEdges[edge][selectedProp]).toString())) {
+        selectedNodes.push(allEdges[edge]['from'])
+        selectedNodes.push(allEdges[edge]['to'])
+      }
+    }
+  }
+  selectNodes(selectedNodes)
+}</script>
+            <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/vis-network/9.1.2/dist/dist/vis-network.min.css" integrity="sha512-WgxfT5LWjfszlPHXRmBWHkV2eceiWTOBvrKCNbdgDYTHrT2AeLCGbF4sZlZw3UMN3WtL0tGUoIAKsu8mllg/XA==" crossorigin="anonymous" referrerpolicy="no-referrer" />
+            <script src="https://cdnjs.cloudflare.com/ajax/libs/vis-network/9.1.2/dist/vis-network.min.js" integrity="sha512-LnvoEWDFrqGHlHmDD2101OrLcbsfkrzoSpvtSQtxK3RMnRV0eOkhhBN2dXHKRrUU8p2DGRTk35n4O8nWSVe1mQ==" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
+            
+            
+            
+            
+            
+            
+
+        
+<center>
+<h1></h1>
+</center>
+
+<!-- <link rel="stylesheet" href="../node_modules/vis/dist/vis.min.css" type="text/css" />
+<script type="text/javascript" src="../node_modules/vis/dist/vis.js"> </script>-->
+        <link
+          href="https://cdn.jsdelivr.net/npm/bootstrap@5.0.0-beta3/dist/css/bootstrap.min.css"
+          rel="stylesheet"
+          integrity="sha384-eOJMYsd53ii+scO/bJGFsiCZc+5NDVN2yr8+0RDqr0Ql0h+rP48ckxlpbzKgwra6"
+          crossorigin="anonymous"
+        />
+        <script
+          src="https://cdn.jsdelivr.net/npm/bootstrap@5.0.0-beta3/dist/js/bootstrap.bundle.min.js"
+          integrity="sha384-JEW9xMcG8R+pH31jmWH6WWP0WintQrMb4s7ZOdauHnUtxwoG2vI5DkLtS3qm9Ekf"
+          crossorigin="anonymous"
+        ></script>
+
+
+        <center>
+          <h1></h1>
+        </center>
+        <style type="text/css">
+
+             #mynetwork {
+                 width: 100%;
+                 height: 700px;
+                 background-color: #222222;
+                 border: 1px solid lightgray;
+                 position: relative;
+                 float: left;
+             }
+
+             
+             #loadingBar {
+                 position:absolute;
+                 top:0px;
+                 left:0px;
+                 width: 100%;
+                 height: 700px;
+                 background-color:rgba(200,200,200,0.8);
+                 -webkit-transition: all 0.5s ease;
+                 -moz-transition: all 0.5s ease;
+                 -ms-transition: all 0.5s ease;
+                 -o-transition: all 0.5s ease;
+                 transition: all 0.5s ease;
+                 opacity:1;
+             }
+
+             #bar {
+                 position:absolute;
+                 top:0px;
+                 left:0px;
+                 width:20px;
+                 height:20px;
+                 margin:auto auto auto auto;
+                 border-radius:11px;
+                 border:2px solid rgba(30,30,30,0.05);
+                 background: rgb(0, 173, 246); /* Old browsers */
+                 box-shadow: 2px 0px 4px rgba(0,0,0,0.4);
+             }
+
+             #border {
+                 position:absolute;
+                 top:10px;
+                 left:10px;
+                 width:500px;
+                 height:23px;
+                 margin:auto auto auto auto;
+                 box-shadow: 0px 0px 4px rgba(0,0,0,0.2);
+                 border-radius:10px;
+             }
+
+             #text {
+                 position:absolute;
+                 top:8px;
+                 left:530px;
+                 width:30px;
+                 height:50px;
+                 margin:auto auto auto auto;
+                 font-size:22px;
+                 color: #000000;
+             }
+
+             div.outerBorder {
+                 position:relative;
+                 top:400px;
+                 width:600px;
+                 height:44px;
+                 margin:auto auto auto auto;
+                 border:8px solid rgba(0,0,0,0.1);
+                 background: rgb(252,252,252); /* Old browsers */
+                 background: -moz-linear-gradient(top,  rgba(252,252,252,1) 0%, rgba(237,237,237,1) 100%); /* FF3.6+ */
+                 background: -webkit-gradient(linear, left top, left bottom, color-stop(0%,rgba(252,252,252,1)), color-stop(100%,rgba(237,237,237,1))); /* Chrome,Safari4+ */
+                 background: -webkit-linear-gradient(top,  rgba(252,252,252,1) 0%,rgba(237,237,237,1) 100%); /* Chrome10+,Safari5.1+ */
+                 background: -o-linear-gradient(top,  rgba(252,252,252,1) 0%,rgba(237,237,237,1) 100%); /* Opera 11.10+ */
+                 background: -ms-linear-gradient(top,  rgba(252,252,252,1) 0%,rgba(237,237,237,1) 100%); /* IE10+ */
+                 background: linear-gradient(to bottom,  rgba(252,252,252,1) 0%,rgba(237,237,237,1) 100%); /* W3C */
+                 filter: progid:DXImageTransform.Microsoft.gradient( startColorstr='#fcfcfc', endColorstr='#ededed',GradientType=0 ); /* IE6-9 */
+                 border-radius:72px;
+                 box-shadow: 0px 0px 10px rgba(0,0,0,0.2);
+             }
+             
+
+             
+
+             
+        </style>
+    </head>
+
+
+    <body>
+        <div class="card" style="width: 100%">
+            
+            
+            <div id="mynetwork" class="card-body"></div>
+        </div>
+
+        
+            <div id="loadingBar">
+              <div class="outerBorder">
+                <div id="text">0%</div>
+                <div id="border">
+                  <div id="bar"></div>
+                </div>
+              </div>
+            </div>
+        
+        
+
+        <script type="text/javascript">
+
+              // initialize global variables.
+              var edges;
+              var nodes;
+              var allNodes;
+              var allEdges;
+              var nodeColors;
+              var originalNodes;
+              var network;
+              var container;
+              var options, data;
+              var filter = {
+                  item : '',
+                  property : '',
+                  value : []
+              };
+
+              
+
+              
+
+              // This method is responsible for drawing the graph, returns the drawn network
+              function drawGraph() {
+                  var container = document.getElementById('mynetwork');
+
+                  
+
+                  // parsing and collecting nodes and edges from the python
+                  nodes = new vis.DataSet([{"color": "#ffffff", "font": {"color": "white"}, "id": "4:aec372e5-6358-48e0-96c4-3583c9d0569e:39", "label": "Starship Hls", "shape": "dot", "title": "Vehicle"}, {"color": "#ffffff", "font": {"color": "white"}, "id": "4:aec372e5-6358-48e0-96c4-3583c9d0569e:572", "label": "Artemis Iii", "shape": "dot", "title": "Mission"}, {"color": "#FF00FF", "font": {"color": "white"}, "id": "4:aec372e5-6358-48e0-96c4-3583c9d0569e:40", "label": "Starlink", "shape": "dot", "title": "Organization"}, {"color": "#ffffff", "font": {"color": "white"}, "id": "4:aec372e5-6358-48e0-96c4-3583c9d0569e:41", "label": "Ukraine", "shape": "dot", "title": "Country"}, {"color": "#ffffff", "font": {"color": "white"}, "id": "4:aec372e5-6358-48e0-96c4-3583c9d0569e:42", "label": "Taiwan", "shape": "dot", "title": "Country"}, {"color": "#ffffff", "font": {"color": "white"}, "id": "4:aec372e5-6358-48e0-96c4-3583c9d0569e:44", "label": "Orbital Debris", "shape": "dot", "title": "Hazard"}, {"color": "#ffffff", "font": {"color": "white"}, "id": "4:aec372e5-6358-48e0-96c4-3583c9d0569e:45", "label": "Kessler Syndrome", "shape": "dot", "title": "Phenomenon"}, {"color": "#ffffff", "font": {"color": "white"}, "id": "4:aec372e5-6358-48e0-96c4-3583c9d0569e:46", "label": "Wolf Amendment", "shape": "dot", "title": "Law"}, {"color": "#FF00FF", "font": {"color": "white"}, "id": "4:aec372e5-6358-48e0-96c4-3583c9d0569e:435", "label": "Nasa", "shape": "dot", "title": "Organization"}, {"color": "#ffffff", "font": {"color": "white"}, "id": "4:aec372e5-6358-48e0-96c4-3583c9d0569e:478", "label": "China", "shape": "dot", "title": "Country"}, {"color": "#FFFF00", "font": {"color": "white"}, "id": "4:aec372e5-6358-48e0-96c4-3583c9d0569e:48", "label": "Planetary Protection", "shape": "dot", "title": "Concept"}, {"color": "#ffffff", "font": {"color": "white"}, "id": "4:aec372e5-6358-48e0-96c4-3583c9d0569e:480", "label": "Mars", "shape": "dot", "title": "Planet"}, {"color": "#FF00FF", "font": {"color": "white"}, "id": "4:aec372e5-6358-48e0-96c4-3583c9d0569e:49", "label": "Planetary Protection", "shape": "dot", "title": "Organization"}, {"color": "#ffffff", "font": {"color": "white"}, "id": "4:aec372e5-6358-48e0-96c4-3583c9d0569e:553", "label": "Escapade", "shape": "dot", "title": "Mission"}, {"color": "#ffffff", "font": {"color": "white"}, "id": "4:aec372e5-6358-48e0-96c4-3583c9d0569e:51", "label": "Artemis Ii", "shape": "dot", "title": "Mission"}, {"color": "#ffffff", "font": {"color": "white"}, "id": "4:aec372e5-6358-48e0-96c4-3583c9d0569e:536", "label": "Moon", "shape": "dot", "title": "Celestialbody"}, {"color": "#ffffff", "font": {"color": "white"}, "id": "4:aec372e5-6358-48e0-96c4-3583c9d0569e:52", "label": "Wiseman", "shape": "dot", "title": "Astronaut"}, {"color": "#ffffff", "font": {"color": "white"}, "id": "4:aec372e5-6358-48e0-96c4-3583c9d0569e:53", "label": "Glover", "shape": "dot", "title": "Astronaut"}, {"color": "#ffffff", "font": {"color": "white"}, "id": "4:aec372e5-6358-48e0-96c4-3583c9d0569e:54", "label": "Koch", "shape": "dot", "title": "Astronaut"}, {"color": "#ffffff", "font": {"color": "white"}, "id": "4:aec372e5-6358-48e0-96c4-3583c9d0569e:55", "label": "Hansen", "shape": "dot", "title": "Astronaut"}, {"color": "#FF4500", "font": {"color": "white"}, "id": "4:aec372e5-6358-48e0-96c4-3583c9d0569e:56", "label": "Moon", "shape": "dot", "title": "Location"}, {"color": "#ffffff", "font": {"color": "white"}, "id": "4:aec372e5-6358-48e0-96c4-3583c9d0569e:64", "label": "2026", "shape": "dot", "title": "Time"}, {"color": "#ffffff", "font": {"color": "white"}, "id": "4:aec372e5-6358-48e0-96c4-3583c9d0569e:57", "label": "Mars Sample Return Orbiter", "shape": "dot", "title": "Mission"}, {"color": "#ffffff", "font": {"color": "white"}, "id": "4:aec372e5-6358-48e0-96c4-3583c9d0569e:58", "label": "Tianwen-3", "shape": "dot", "title": "Mission"}, {"color": "#ffffff", "font": {"color": "white"}, "id": "4:aec372e5-6358-48e0-96c4-3583c9d0569e:59", "label": "Axiom", "shape": "dot", "title": "Station"}, {"color": "#FF4500", "font": {"color": "white"}, "id": "4:aec372e5-6358-48e0-96c4-3583c9d0569e:63", "label": "Leo", "shape": "dot", "title": "Location"}, {"color": "#ffffff", "font": {"color": "white"}, "id": "4:aec372e5-6358-48e0-96c4-3583c9d0569e:60", "label": "Orbital Reef", "shape": "dot", "title": "Station"}, {"color": "#ffffff", "font": {"color": "white"}, "id": "4:aec372e5-6358-48e0-96c4-3583c9d0569e:61", "label": "Starshot", "shape": "dot", "title": "Project"}, {"color": "#FF4500", "font": {"color": "white"}, "id": "4:aec372e5-6358-48e0-96c4-3583c9d0569e:62", "label": "Alpha Centauri", "shape": "dot", "title": "Location"}, {"color": "#ffffff", "font": {"color": "white"}, "id": "4:aec372e5-6358-48e0-96c4-3583c9d0569e:114", "label": "Alpha Centauri", "shape": "dot", "title": "Starsystem"}, {"color": "#FFFF00", "font": {"color": "white"}, "id": "4:aec372e5-6358-48e0-96c4-3583c9d0569e:66", "label": "Humanity", "shape": "dot", "title": "Concept"}, {"color": "#ffffff", "font": {"color": "white"}, "id": "4:aec372e5-6358-48e0-96c4-3583c9d0569e:68", "label": "V-2 Rockets", "shape": "dot", "title": "Technology"}, {"color": "#ffffff", "font": {"color": "white"}, "id": "4:aec372e5-6358-48e0-96c4-3583c9d0569e:69", "label": "Space Launch System (Sls)", "shape": "dot", "title": "Technology"}, {"color": "#ffffff", "font": {"color": "white"}, "id": "4:aec372e5-6358-48e0-96c4-3583c9d0569e:77", "label": "Mars Science Laboratory", "shape": "dot", "title": "Mission"}, {"color": "#ffffff", "font": {"color": "white"}, "id": "4:aec372e5-6358-48e0-96c4-3583c9d0569e:465", "label": "Curiosity", "shape": "dot", "title": "Vehicle"}, {"color": "#ffffff", "font": {"color": "white"}, "id": "4:aec372e5-6358-48e0-96c4-3583c9d0569e:78", "label": "Ilrs", "shape": "dot", "title": "Station"}, {"color": "#ffffff", "font": {"color": "white"}, "id": "4:aec372e5-6358-48e0-96c4-3583c9d0569e:82", "label": "Jwst", "shape": "dot", "title": "Project"}, {"color": "#ffffff", "font": {"color": "white"}, "id": "4:aec372e5-6358-48e0-96c4-3583c9d0569e:86", "label": "Starship", "shape": "dot", "title": "Program"}, {"color": "#FF00FF", "font": {"color": "white"}, "id": "4:aec372e5-6358-48e0-96c4-3583c9d0569e:462", "label": "Spacex", "shape": "dot", "title": "Organization"}, {"color": "#ffffff", "font": {"color": "white"}, "id": "4:aec372e5-6358-48e0-96c4-3583c9d0569e:87", "label": "Starlink", "shape": "dot", "title": "Program"}, {"color": "#ffffff", "font": {"color": "white"}, "id": "4:aec372e5-6358-48e0-96c4-3583c9d0569e:88", "label": "Hls Lander", "shape": "dot", "title": "Program"}, {"color": "#ffffff", "font": {"color": "white"}, "id": "4:aec372e5-6358-48e0-96c4-3583c9d0569e:89", "label": "New Glenn", "shape": "dot", "title": "Program"}, {"color": "#FF00FF", "font": {"color": "white"}, "id": "4:aec372e5-6358-48e0-96c4-3583c9d0569e:512", "label": "Blue Origin", "shape": "dot", "title": "Organization"}, {"color": "#ffffff", "font": {"color": "white"}, "id": "4:aec372e5-6358-48e0-96c4-3583c9d0569e:91", "label": "Artemis V Lander", "shape": "dot", "title": "Program"}, {"color": "#ffffff", "font": {"color": "white"}, "id": "4:aec372e5-6358-48e0-96c4-3583c9d0569e:90", "label": "Blue Moon", "shape": "dot", "title": "Program"}, {"color": "#ffffff", "font": {"color": "white"}, "id": "4:aec372e5-6358-48e0-96c4-3583c9d0569e:92", "label": "Vulcan Rocket", "shape": "dot", "title": "Program"}, {"color": "#FF00FF", "font": {"color": "white"}, "id": "4:aec372e5-6358-48e0-96c4-3583c9d0569e:515", "label": "Ula", "shape": "dot", "title": "Organization"}, {"color": "#ffffff", "font": {"color": "white"}, "id": "4:aec372e5-6358-48e0-96c4-3583c9d0569e:93", "label": "Be-4 Engines", "shape": "dot", "title": "Product"}, {"color": "#ffffff", "font": {"color": "white"}, "id": "4:aec372e5-6358-48e0-96c4-3583c9d0569e:99", "label": "Clps", "shape": "dot", "title": "Model"}, {"color": "#ffffff", "font": {"color": "white"}, "id": "4:aec372e5-6358-48e0-96c4-3583c9d0569e:100", "label": "Uranus Orbiter", "shape": "dot", "title": "Mission"}, {"color": "#ffffff", "font": {"color": "white"}, "id": "4:aec372e5-6358-48e0-96c4-3583c9d0569e:560", "label": "Uranus", "shape": "dot", "title": "Planet"}, {"color": "#ffffff", "font": {"color": "white"}, "id": "4:aec372e5-6358-48e0-96c4-3583c9d0569e:101", "label": "Lunar Water", "shape": "dot", "title": "Resource"}, {"color": "#ffffff", "font": {"color": "white"}, "id": "4:aec372e5-6358-48e0-96c4-3583c9d0569e:102", "label": "In-Situ Resource Utilization", "shape": "dot", "title": "Process"}, {"color": "#ffffff", "font": {"color": "white"}, "id": "4:aec372e5-6358-48e0-96c4-3583c9d0569e:106", "label": "Biomedical Research", "shape": "dot", "title": "Technology"}, {"color": "#ffffff", "font": {"color": "white"}, "id": "4:aec372e5-6358-48e0-96c4-3583c9d0569e:452", "label": "Iss", "shape": "dot", "title": "Station"}, {"color": "#ffffff", "font": {"color": "white"}, "id": "4:aec372e5-6358-48e0-96c4-3583c9d0569e:107", "label": "Organ-On-A-Chip Studies", "shape": "dot", "title": "Study"}, {"color": "#FF4500", "font": {"color": "white"}, "id": "4:aec372e5-6358-48e0-96c4-3583c9d0569e:521", "label": "Iss", "shape": "dot", "title": "Location"}, {"color": "#ffffff", "font": {"color": "white"}, "id": "4:aec372e5-6358-48e0-96c4-3583c9d0569e:108", "label": "Aging Pathways", "shape": "dot", "title": "Pathway"}, {"color": "#ffffff", "font": {"color": "white"}, "id": "4:aec372e5-6358-48e0-96c4-3583c9d0569e:590", "label": "Earth Medicine", "shape": "dot", "title": "Medicine"}, {"color": "#ffffff", "font": {"color": "white"}, "id": "4:aec372e5-6358-48e0-96c4-3583c9d0569e:110", "label": "Starship Hls", "shape": "dot", "title": "Spacecraft"}, {"color": "#FFFF00", "font": {"color": "white"}, "id": "4:aec372e5-6358-48e0-96c4-3583c9d0569e:112", "label": "Kessler Syndrome", "shape": "dot", "title": "Concept"}, {"color": "#FFFF00", "font": {"color": "white"}, "id": "4:aec372e5-6358-48e0-96c4-3583c9d0569e:111", "label": "Orbital Debris", "shape": "dot", "title": "Concept"}, {"color": "#FF00FF", "font": {"color": "white"}, "id": "4:aec372e5-6358-48e0-96c4-3583c9d0569e:113", "label": "Iss", "shape": "dot", "title": "Organization"}, {"color": "#ffffff", "font": {"color": "white"}, "id": "4:aec372e5-6358-48e0-96c4-3583c9d0569e:115", "label": "Colonization Of Mars", "shape": "dot", "title": "Event"}, {"color": "#ffffff", "font": {"color": "white"}, "id": "4:aec372e5-6358-48e0-96c4-3583c9d0569e:65", "label": "2030S", "shape": "dot", "title": "Time"}, {"color": "#FF00FF", "font": {"color": "white"}, "id": "4:aec372e5-6358-48e0-96c4-3583c9d0569e:116", "label": "Humanity", "shape": "dot", "title": "Organization"}, {"color": "#ffffff", "font": {"color": "white"}, "id": "4:aec372e5-6358-48e0-96c4-3583c9d0569e:409", "label": "Nasa", "shape": "dot", "title": "Government agency"}, {"color": "#ffffff", "font": {"color": "white"}, "id": "4:aec372e5-6358-48e0-96c4-3583c9d0569e:411", "label": "Spacex", "shape": "dot", "title": "Company"}, {"color": "#ffffff", "font": {"color": "white"}, "id": "4:aec372e5-6358-48e0-96c4-3583c9d0569e:412", "label": "Blue Origin", "shape": "dot", "title": "Company"}, {"color": "#ffffff", "font": {"color": "white"}, "id": "4:aec372e5-6358-48e0-96c4-3583c9d0569e:413", "label": "Apollo", "shape": "dot", "title": "Mission"}, {"color": "#ffffff", "font": {"color": "white"}, "id": "4:aec372e5-6358-48e0-96c4-3583c9d0569e:414", "label": "Artemis", "shape": "dot", "title": "Mission"}, {"color": "#ffffff", "font": {"color": "white"}, "id": "4:aec372e5-6358-48e0-96c4-3583c9d0569e:415", "label": "Artemis", "shape": "dot", "title": "Program"}, {"color": "#ffffff", "font": {"color": "white"}, "id": "4:aec372e5-6358-48e0-96c4-3583c9d0569e:434", "label": "Us", "shape": "dot", "title": "Country"}, {"color": "#ffffff", "font": {"color": "white"}, "id": "4:aec372e5-6358-48e0-96c4-3583c9d0569e:565", "label": "Water Ice", "shape": "dot", "title": "Compound"}, {"color": "#ffffff", "font": {"color": "white"}, "id": "4:aec372e5-6358-48e0-96c4-3583c9d0569e:484", "label": "Nasa", "shape": "dot", "title": "Agency"}, {"color": "#ffffff", "font": {"color": "white"}, "id": "4:aec372e5-6358-48e0-96c4-3583c9d0569e:416", "label": "V-2 Rockets", "shape": "dot", "title": "Rocket"}, {"color": "#ffffff", "font": {"color": "white"}, "id": "4:aec372e5-6358-48e0-96c4-3583c9d0569e:417", "label": "Space Launch System (Sls)", "shape": "dot", "title": "Rocket"}, {"color": "#00FFFF", "font": {"color": "white"}, "id": "4:aec372e5-6358-48e0-96c4-3583c9d0569e:418", "label": "Galileo", "shape": "dot", "title": "Person"}, {"color": "#ffffff", "font": {"color": "white"}, "id": "4:aec372e5-6358-48e0-96c4-3583c9d0569e:71", "label": "Starship", "shape": "dot", "title": "Technology"}, {"color": "#ffffff", "font": {"color": "white"}, "id": "4:aec372e5-6358-48e0-96c4-3583c9d0569e:419", "label": "Starship", "shape": "dot", "title": "Spacecraft"}, {"color": "#FF4500", "font": {"color": "white"}, "id": "4:aec372e5-6358-48e0-96c4-3583c9d0569e:420", "label": "Lunar South Pole", "shape": "dot", "title": "Location"}, {"color": "#00FFFF", "font": {"color": "white"}, "id": "4:aec372e5-6358-48e0-96c4-3583c9d0569e:421", "label": "Galileo Galilei", "shape": "dot", "title": "Person"}, {"color": "#ffffff", "font": {"color": "white"}, "id": "4:aec372e5-6358-48e0-96c4-3583c9d0569e:422", "label": "Moon", "shape": "dot", "title": "Celestial body"}, {"color": "#00FFFF", "font": {"color": "white"}, "id": "4:aec372e5-6358-48e0-96c4-3583c9d0569e:423", "label": "Johannes Kepler", "shape": "dot", "title": "Person"}, {"color": "#00FFFF", "font": {"color": "white"}, "id": "4:aec372e5-6358-48e0-96c4-3583c9d0569e:424", "label": "Konstantin Tsiolkovsky", "shape": "dot", "title": "Person"}, {"color": "#FFFF00", "font": {"color": "white"}, "id": "4:aec372e5-6358-48e0-96c4-3583c9d0569e:432", "label": "Rocket Equation", "shape": "dot", "title": "Concept"}, {"color": "#ffffff", "font": {"color": "white"}, "id": "4:aec372e5-6358-48e0-96c4-3583c9d0569e:425", "label": "V-2 Rocket", "shape": "dot", "title": "Rocket"}, {"color": "#ffffff", "font": {"color": "white"}, "id": "4:aec372e5-6358-48e0-96c4-3583c9d0569e:427", "label": "Us Redstone", "shape": "dot", "title": "Program"}, {"color": "#ffffff", "font": {"color": "white"}, "id": "4:aec372e5-6358-48e0-96c4-3583c9d0569e:428", "label": "Soviet R-7", "shape": "dot", "title": "Program"}, {"color": "#ffffff", "font": {"color": "white"}, "id": "4:aec372e5-6358-48e0-96c4-3583c9d0569e:426", "label": "Germany", "shape": "dot", "title": "Country"}, {"color": "#00FFFF", "font": {"color": "white"}, "id": "4:aec372e5-6358-48e0-96c4-3583c9d0569e:429", "label": "Wernher Von Braun", "shape": "dot", "title": "Person"}, {"color": "#ffffff", "font": {"color": "white"}, "id": "4:aec372e5-6358-48e0-96c4-3583c9d0569e:431", "label": "Sputnik", "shape": "dot", "title": "Satellite"}, {"color": "#ffffff", "font": {"color": "white"}, "id": "4:aec372e5-6358-48e0-96c4-3583c9d0569e:430", "label": "Ussr", "shape": "dot", "title": "Country"}, {"color": "#ffffff", "font": {"color": "white"}, "id": "4:aec372e5-6358-48e0-96c4-3583c9d0569e:433", "label": "Geopolitical Rivalry", "shape": "dot", "title": "Event"}, {"color": "#ffffff", "font": {"color": "white"}, "id": "4:aec372e5-6358-48e0-96c4-3583c9d0569e:485", "label": "United States", "shape": "dot", "title": "Country"}, {"color": "#ffffff", "font": {"color": "white"}, "id": "4:aec372e5-6358-48e0-96c4-3583c9d0569e:606", "label": "Starship Hls", "shape": "dot", "title": "Program"}, {"color": "#00FFFF", "font": {"color": "white"}, "id": "4:aec372e5-6358-48e0-96c4-3583c9d0569e:438", "label": "Neil Armstrong", "shape": "dot", "title": "Person"}, {"color": "#ffffff", "font": {"color": "white"}, "id": "4:aec372e5-6358-48e0-96c4-3583c9d0569e:440", "label": "Apollo 11", "shape": "dot", "title": "Mission"}, {"color": "#00FFFF", "font": {"color": "white"}, "id": "4:aec372e5-6358-48e0-96c4-3583c9d0569e:439", "label": "Buzz Aldrin", "shape": "dot", "title": "Person"}, {"color": "#ffffff", "font": {"color": "white"}, "id": "4:aec372e5-6358-48e0-96c4-3583c9d0569e:443", "label": "Space Shuttle", "shape": "dot", "title": "Vehicle"}, {"color": "#ffffff", "font": {"color": "white"}, "id": "4:aec372e5-6358-48e0-96c4-3583c9d0569e:280", "label": "Challenger", "shape": "dot", "title": "Vehicle"}, {"color": "#ffffff", "font": {"color": "white"}, "id": "4:aec372e5-6358-48e0-96c4-3583c9d0569e:445", "label": "Voyager 1", "shape": "dot", "title": "Probe"}, {"color": "#ffffff", "font": {"color": "white"}, "id": "4:aec372e5-6358-48e0-96c4-3583c9d0569e:72", "label": "Outer Giants", "shape": "dot", "title": "Entity"}, {"color": "#ffffff", "font": {"color": "white"}, "id": "4:aec372e5-6358-48e0-96c4-3583c9d0569e:446", "label": "Voyager 2", "shape": "dot", "title": "Probe"}, {"color": "#ffffff", "font": {"color": "white"}, "id": "4:aec372e5-6358-48e0-96c4-3583c9d0569e:449", "label": "Artemis Program", "shape": "dot", "title": "Program"}, {"color": "#ffffff", "font": {"color": "white"}, "id": "4:aec372e5-6358-48e0-96c4-3583c9d0569e:436", "label": "Apollo Program", "shape": "dot", "title": "Program"}, {"color": "#ffffff", "font": {"color": "white"}, "id": "4:aec372e5-6358-48e0-96c4-3583c9d0569e:73", "label": "Technological Gap", "shape": "dot", "title": "Entity"}, {"color": "#ffffff", "font": {"color": "white"}, "id": "4:aec372e5-6358-48e0-96c4-3583c9d0569e:451", "label": "International Space Station", "shape": "dot", "title": "Station"}, {"color": "#FF00FF", "font": {"color": "white"}, "id": "4:aec372e5-6358-48e0-96c4-3583c9d0569e:453", "label": "Roscosmos", "shape": "dot", "title": "Organization"}, {"color": "#FF00FF", "font": {"color": "white"}, "id": "4:aec372e5-6358-48e0-96c4-3583c9d0569e:455", "label": "Esa", "shape": "dot", "title": "Organization"}, {"color": "#FF00FF", "font": {"color": "white"}, "id": "4:aec372e5-6358-48e0-96c4-3583c9d0569e:457", "label": "Jaxa", "shape": "dot", "title": "Organization"}, {"color": "#FF00FF", "font": {"color": "white"}, "id": "4:aec372e5-6358-48e0-96c4-3583c9d0569e:458", "label": "Csa", "shape": "dot", "title": "Organization"}, {"color": "#ffffff", "font": {"color": "white"}, "id": "4:aec372e5-6358-48e0-96c4-3583c9d0569e:508", "label": "Angara Rocket", "shape": "dot", "title": "Rocket"}, {"color": "#ffffff", "font": {"color": "white"}, "id": "4:aec372e5-6358-48e0-96c4-3583c9d0569e:83", "label": "Orion Service Module", "shape": "dot", "title": "Facility"}, {"color": "#ffffff", "font": {"color": "white"}, "id": "4:aec372e5-6358-48e0-96c4-3583c9d0569e:496", "label": "Ariane 6", "shape": "dot", "title": "Rocket"}, {"color": "#ffffff", "font": {"color": "white"}, "id": "4:aec372e5-6358-48e0-96c4-3583c9d0569e:498", "label": "Zero Debris Charter", "shape": "dot", "title": "Agreement"}, {"color": "#ffffff", "font": {"color": "white"}, "id": "4:aec372e5-6358-48e0-96c4-3583c9d0569e:499", "label": "Copernicus", "shape": "dot", "title": "Program"}, {"color": "#ffffff", "font": {"color": "white"}, "id": "4:aec372e5-6358-48e0-96c4-3583c9d0569e:497", "label": "Ariane 5", "shape": "dot", "title": "Rocket"}, {"color": "#ffffff", "font": {"color": "white"}, "id": "4:aec372e5-6358-48e0-96c4-3583c9d0569e:500", "label": "Orion Service Module", "shape": "dot", "title": "Module"}, {"color": "#ffffff", "font": {"color": "white"}, "id": "4:aec372e5-6358-48e0-96c4-3583c9d0569e:506", "label": "H3 Rocket", "shape": "dot", "title": "Rocket"}, {"color": "#ffffff", "font": {"color": "white"}, "id": "4:aec372e5-6358-48e0-96c4-3583c9d0569e:507", "label": "Mmx", "shape": "dot", "title": "Mission"}, {"color": "#ffffff", "font": {"color": "white"}, "id": "4:aec372e5-6358-48e0-96c4-3583c9d0569e:509", "label": "Starship", "shape": "dot", "title": "Rocket"}, {"color": "#ffffff", "font": {"color": "white"}, "id": "4:aec372e5-6358-48e0-96c4-3583c9d0569e:510", "label": "Starlink", "shape": "dot", "title": "Satellite"}, {"color": "#ffffff", "font": {"color": "white"}, "id": "4:aec372e5-6358-48e0-96c4-3583c9d0569e:464", "label": "Mars Science Laboratory", "shape": "dot", "title": "Laboratory"}, {"color": "#ffffff", "font": {"color": "white"}, "id": "4:aec372e5-6358-48e0-96c4-3583c9d0569e:76", "label": "Perseverance", "shape": "dot", "title": "Probe"}, {"color": "#ffffff", "font": {"color": "white"}, "id": "4:aec372e5-6358-48e0-96c4-3583c9d0569e:466", "label": "Perseverance", "shape": "dot", "title": "Vehicle"}, {"color": "#FF00FF", "font": {"color": "white"}, "id": "4:aec372e5-6358-48e0-96c4-3583c9d0569e:467", "label": "Mars Science Laboratory", "shape": "dot", "title": "Organization"}, {"color": "#ffffff", "font": {"color": "white"}, "id": "4:aec372e5-6358-48e0-96c4-3583c9d0569e:468", "label": "Sky Crane", "shape": "dot", "title": "Technology"}, {"color": "#ffffff", "font": {"color": "white"}, "id": "4:aec372e5-6358-48e0-96c4-3583c9d0569e:474", "label": "Lunar Revival", "shape": "dot", "title": "Event"}, {"color": "#ffffff", "font": {"color": "white"}, "id": "4:aec372e5-6358-48e0-96c4-3583c9d0569e:473", "label": "2020S", "shape": "dot", "title": "Time"}, {"color": "#ffffff", "font": {"color": "white"}, "id": "4:aec372e5-6358-48e0-96c4-3583c9d0569e:477", "label": "International Lunar Research Station", "shape": "dot", "title": "Station"}, {"color": "#FF4500", "font": {"color": "white"}, "id": "4:aec372e5-6358-48e0-96c4-3583c9d0569e:47", "label": "South Pole", "shape": "dot", "title": "Location"}, {"color": "#ffffff", "font": {"color": "white"}, "id": "4:aec372e5-6358-48e0-96c4-3583c9d0569e:479", "label": "Perseverance", "shape": "dot", "title": "Mission"}, {"color": "#ffffff", "font": {"color": "white"}, "id": "4:aec372e5-6358-48e0-96c4-3583c9d0569e:481", "label": "Chandrayaan-3", "shape": "dot", "title": "Mission"}, {"color": "#ffffff", "font": {"color": "white"}, "id": "4:aec372e5-6358-48e0-96c4-3583c9d0569e:482", "label": "India", "shape": "dot", "title": "Country"}, {"color": "#ffffff", "font": {"color": "white"}, "id": "4:aec372e5-6358-48e0-96c4-3583c9d0569e:486", "label": "Mars Sample Return", "shape": "dot", "title": "Program"}, {"color": "#ffffff", "font": {"color": "white"}, "id": "4:aec372e5-6358-48e0-96c4-3583c9d0569e:487", "label": "Jwst", "shape": "dot", "title": "Telescope"}, {"color": "#ffffff", "font": {"color": "white"}, "id": "4:aec372e5-6358-48e0-96c4-3583c9d0569e:554", "label": "James Webb Space Telescope", "shape": "dot", "title": "Telescope"}, {"color": "#ffffff", "font": {"color": "white"}, "id": "4:aec372e5-6358-48e0-96c4-3583c9d0569e:555", "label": "Supernova", "shape": "dot", "title": "Star"}, {"color": "#ffffff", "font": {"color": "white"}, "id": "4:aec372e5-6358-48e0-96c4-3583c9d0569e:488", "label": "Clps Contracts", "shape": "dot", "title": "Contract"}, {"color": "#ffffff", "font": {"color": "white"}, "id": "4:aec372e5-6358-48e0-96c4-3583c9d0569e:489", "label": "Artemis Accords", "shape": "dot", "title": "Agreement"}, {"color": "#ffffff", "font": {"color": "white"}, "id": "4:aec372e5-6358-48e0-96c4-3583c9d0569e:491", "label": "Tiangong Space Station", "shape": "dot", "title": "Station"}, {"color": "#FF00FF", "font": {"color": "white"}, "id": "4:aec372e5-6358-48e0-96c4-3583c9d0569e:492", "label": "Cnsa", "shape": "dot", "title": "Organization"}, {"color": "#ffffff", "font": {"color": "white"}, "id": "4:aec372e5-6358-48e0-96c4-3583c9d0569e:490", "label": "Cnsa", "shape": "dot", "title": "Agency"}, {"color": "#ffffff", "font": {"color": "white"}, "id": "4:aec372e5-6358-48e0-96c4-3583c9d0569e:493", "label": "Tiangong Space Station", "shape": "dot", "title": "Facility"}, {"color": "#ffffff", "font": {"color": "white"}, "id": "4:aec372e5-6358-48e0-96c4-3583c9d0569e:494", "label": "Tianwen-2", "shape": "dot", "title": "Mission"}, {"color": "#ffffff", "font": {"color": "white"}, "id": "4:aec372e5-6358-48e0-96c4-3583c9d0569e:495", "label": "469219 Kamo-Oalewa", "shape": "dot", "title": "Celestial body"}, {"color": "#ffffff", "font": {"color": "white"}, "id": "4:aec372e5-6358-48e0-96c4-3583c9d0569e:551", "label": "Long March 3B", "shape": "dot", "title": "Rocket"}, {"color": "#ffffff", "font": {"color": "white"}, "id": "4:aec372e5-6358-48e0-96c4-3583c9d0569e:552", "label": "Kamo-Oalewa", "shape": "dot", "title": "Asteroid"}, {"color": "#FF00FF", "font": {"color": "white"}, "id": "4:aec372e5-6358-48e0-96c4-3583c9d0569e:501", "label": "Isro", "shape": "dot", "title": "Organization"}, {"color": "#ffffff", "font": {"color": "white"}, "id": "4:aec372e5-6358-48e0-96c4-3583c9d0569e:502", "label": "Gaganyaan", "shape": "dot", "title": "Mission"}, {"color": "#ffffff", "font": {"color": "white"}, "id": "4:aec372e5-6358-48e0-96c4-3583c9d0569e:503", "label": "Chandrayaan-4", "shape": "dot", "title": "Mission"}, {"color": "#ffffff", "font": {"color": "white"}, "id": "4:aec372e5-6358-48e0-96c4-3583c9d0569e:84", "label": "Gaganyaan", "shape": "dot", "title": "Project"}, {"color": "#ffffff", "font": {"color": "white"}, "id": "4:aec372e5-6358-48e0-96c4-3583c9d0569e:85", "label": "Chandrayaan-4", "shape": "dot", "title": "Project"}, {"color": "#ffffff", "font": {"color": "white"}, "id": "4:aec372e5-6358-48e0-96c4-3583c9d0569e:504", "label": "Nisar", "shape": "dot", "title": "Satellite"}, {"color": "#ffffff", "font": {"color": "white"}, "id": "4:aec372e5-6358-48e0-96c4-3583c9d0569e:505", "label": "Earth", "shape": "dot", "title": "Planet"}, {"color": "#FF00FF", "font": {"color": "white"}, "id": "4:aec372e5-6358-48e0-96c4-3583c9d0569e:511", "label": "Dod", "shape": "dot", "title": "Organization"}, {"color": "#ffffff", "font": {"color": "white"}, "id": "4:aec372e5-6358-48e0-96c4-3583c9d0569e:513", "label": "New Glenn", "shape": "dot", "title": "Rocket"}, {"color": "#ffffff", "font": {"color": "white"}, "id": "4:aec372e5-6358-48e0-96c4-3583c9d0569e:514", "label": "Blue Moon", "shape": "dot", "title": "Lander"}, {"color": "#ffffff", "font": {"color": "white"}, "id": "4:aec372e5-6358-48e0-96c4-3583c9d0569e:517", "label": "Be-4 Engines", "shape": "dot", "title": "Engine"}, {"color": "#ffffff", "font": {"color": "white"}, "id": "4:aec372e5-6358-48e0-96c4-3583c9d0569e:516", "label": "Vulcan Rocket", "shape": "dot", "title": "Rocket"}, {"color": "#FF00FF", "font": {"color": "white"}, "id": "4:aec372e5-6358-48e0-96c4-3583c9d0569e:518", "label": "Boeing", "shape": "dot", "title": "Organization"}, {"color": "#ffffff", "font": {"color": "white"}, "id": "4:aec372e5-6358-48e0-96c4-3583c9d0569e:519", "label": "Starliner Program", "shape": "dot", "title": "Program"}, {"color": "#ffffff", "font": {"color": "white"}, "id": "4:aec372e5-6358-48e0-96c4-3583c9d0569e:520", "label": "Iss", "shape": "dot", "title": "Facility"}, {"color": "#ffffff", "font": {"color": "white"}, "id": "4:aec372e5-6358-48e0-96c4-3583c9d0569e:523", "label": "Vulcan Centaur", "shape": "dot", "title": "Rocket"}, {"color": "#ffffff", "font": {"color": "white"}, "id": "4:aec372e5-6358-48e0-96c4-3583c9d0569e:524", "label": "Us National Security Space Launch", "shape": "dot", "title": "Program"}, {"color": "#ffffff", "font": {"color": "white"}, "id": "4:aec372e5-6358-48e0-96c4-3583c9d0569e:526", "label": "Atlas V", "shape": "dot", "title": "Rocket"}, {"color": "#ffffff", "font": {"color": "white"}, "id": "4:aec372e5-6358-48e0-96c4-3583c9d0569e:528", "label": "Neutron", "shape": "dot", "title": "Rocket"}, {"color": "#ffffff", "font": {"color": "white"}, "id": "4:aec372e5-6358-48e0-96c4-3583c9d0569e:94", "label": "Virginia", "shape": "dot", "title": "Place"}, {"color": "#FF4500", "font": {"color": "white"}, "id": "4:aec372e5-6358-48e0-96c4-3583c9d0569e:529", "label": "Virginia", "shape": "dot", "title": "Location"}, {"color": "#FF00FF", "font": {"color": "white"}, "id": "4:aec372e5-6358-48e0-96c4-3583c9d0569e:527", "label": "Rocket Lab", "shape": "dot", "title": "Organization"}, {"color": "#ffffff", "font": {"color": "white"}, "id": "4:aec372e5-6358-48e0-96c4-3583c9d0569e:530", "label": "Electron", "shape": "dot", "title": "Rocket"}, {"color": "#FF00FF", "font": {"color": "white"}, "id": "4:aec372e5-6358-48e0-96c4-3583c9d0569e:531", "label": "Ispace", "shape": "dot", "title": "Organization"}, {"color": "#ffffff", "font": {"color": "white"}, "id": "4:aec372e5-6358-48e0-96c4-3583c9d0569e:95", "label": "Japan", "shape": "dot", "title": "Place"}, {"color": "#ffffff", "font": {"color": "white"}, "id": "4:aec372e5-6358-48e0-96c4-3583c9d0569e:535", "label": "Clps", "shape": "dot", "title": "Program"}, {"color": "#FF00FF", "font": {"color": "white"}, "id": "4:aec372e5-6358-48e0-96c4-3583c9d0569e:532", "label": "Intuitive Machines", "shape": "dot", "title": "Organization"}, {"color": "#ffffff", "font": {"color": "white"}, "id": "4:aec372e5-6358-48e0-96c4-3583c9d0569e:96", "label": "Usa", "shape": "dot", "title": "Place"}]);
+                  edges = new vis.DataSet([{"color": "#555555", "from": "4:aec372e5-6358-48e0-96c4-3583c9d0569e:39", "label": "RELATED_TO", "to": "4:aec372e5-6358-48e0-96c4-3583c9d0569e:572"}, {"color": "#555555", "from": "4:aec372e5-6358-48e0-96c4-3583c9d0569e:40", "label": "LOCATED_IN", "to": "4:aec372e5-6358-48e0-96c4-3583c9d0569e:41"}, {"color": "#555555", "from": "4:aec372e5-6358-48e0-96c4-3583c9d0569e:40", "label": "LOCATED_IN", "to": "4:aec372e5-6358-48e0-96c4-3583c9d0569e:42"}, {"color": "#555555", "from": "4:aec372e5-6358-48e0-96c4-3583c9d0569e:44", "label": "CAUSES", "to": "4:aec372e5-6358-48e0-96c4-3583c9d0569e:45"}, {"color": "#555555", "from": "4:aec372e5-6358-48e0-96c4-3583c9d0569e:46", "label": "APPLIES_TO", "to": "4:aec372e5-6358-48e0-96c4-3583c9d0569e:435"}, {"color": "#555555", "from": "4:aec372e5-6358-48e0-96c4-3583c9d0569e:46", "label": "APPLIES_TO", "to": "4:aec372e5-6358-48e0-96c4-3583c9d0569e:478"}, {"color": "#555555", "from": "4:aec372e5-6358-48e0-96c4-3583c9d0569e:435", "label": "LOCATED_IN", "to": "4:aec372e5-6358-48e0-96c4-3583c9d0569e:434"}, {"color": "#555555", "from": "4:aec372e5-6358-48e0-96c4-3583c9d0569e:435", "label": "LOCATED_IN", "to": "4:aec372e5-6358-48e0-96c4-3583c9d0569e:485"}, {"color": "#555555", "from": "4:aec372e5-6358-48e0-96c4-3583c9d0569e:435", "label": "CONTRACTOR", "to": "4:aec372e5-6358-48e0-96c4-3583c9d0569e:462"}, {"color": "#555555", "from": "4:aec372e5-6358-48e0-96c4-3583c9d0569e:435", "label": "COOPERATION", "to": "4:aec372e5-6358-48e0-96c4-3583c9d0569e:478"}, {"color": "#555555", "from": "4:aec372e5-6358-48e0-96c4-3583c9d0569e:435", "label": "CAUSE", "to": "4:aec372e5-6358-48e0-96c4-3583c9d0569e:433"}, {"color": "#555555", "from": "4:aec372e5-6358-48e0-96c4-3583c9d0569e:435", "label": "REQUIRES", "to": "4:aec372e5-6358-48e0-96c4-3583c9d0569e:606"}, {"color": "#555555", "from": "4:aec372e5-6358-48e0-96c4-3583c9d0569e:478", "label": "LOCATED_IN", "to": "4:aec372e5-6358-48e0-96c4-3583c9d0569e:47"}, {"color": "#555555", "from": "4:aec372e5-6358-48e0-96c4-3583c9d0569e:48", "label": "APPLIES_TO", "to": "4:aec372e5-6358-48e0-96c4-3583c9d0569e:480"}, {"color": "#555555", "from": "4:aec372e5-6358-48e0-96c4-3583c9d0569e:480", "label": "COLONIZATION_TARGET", "to": "4:aec372e5-6358-48e0-96c4-3583c9d0569e:65"}, {"color": "#555555", "from": "4:aec372e5-6358-48e0-96c4-3583c9d0569e:49", "label": "RELATED_TO", "to": "4:aec372e5-6358-48e0-96c4-3583c9d0569e:553"}, {"color": "#555555", "from": "4:aec372e5-6358-48e0-96c4-3583c9d0569e:51", "label": "TRAVEL_TO", "to": "4:aec372e5-6358-48e0-96c4-3583c9d0569e:536"}, {"color": "#555555", "from": "4:aec372e5-6358-48e0-96c4-3583c9d0569e:51", "label": "ASTRONAUT", "to": "4:aec372e5-6358-48e0-96c4-3583c9d0569e:52"}, {"color": "#555555", "from": "4:aec372e5-6358-48e0-96c4-3583c9d0569e:51", "label": "ASTRONAUT", "to": "4:aec372e5-6358-48e0-96c4-3583c9d0569e:53"}, {"color": "#555555", "from": "4:aec372e5-6358-48e0-96c4-3583c9d0569e:51", "label": "ASTRONAUT", "to": "4:aec372e5-6358-48e0-96c4-3583c9d0569e:54"}, {"color": "#555555", "from": "4:aec372e5-6358-48e0-96c4-3583c9d0569e:51", "label": "ASTRONAUT", "to": "4:aec372e5-6358-48e0-96c4-3583c9d0569e:55"}, {"color": "#555555", "from": "4:aec372e5-6358-48e0-96c4-3583c9d0569e:51", "label": "DESTINATION", "to": "4:aec372e5-6358-48e0-96c4-3583c9d0569e:56"}, {"color": "#555555", "from": "4:aec372e5-6358-48e0-96c4-3583c9d0569e:51", "label": "SCHEDULED_IN", "to": "4:aec372e5-6358-48e0-96c4-3583c9d0569e:64"}, {"color": "#555555", "from": "4:aec372e5-6358-48e0-96c4-3583c9d0569e:57", "label": "DESTINATION", "to": "4:aec372e5-6358-48e0-96c4-3583c9d0569e:480"}, {"color": "#555555", "from": "4:aec372e5-6358-48e0-96c4-3583c9d0569e:58", "label": "DESTINATION", "to": "4:aec372e5-6358-48e0-96c4-3583c9d0569e:480"}, {"color": "#555555", "from": "4:aec372e5-6358-48e0-96c4-3583c9d0569e:59", "label": "LOCATED_IN", "to": "4:aec372e5-6358-48e0-96c4-3583c9d0569e:63"}, {"color": "#555555", "from": "4:aec372e5-6358-48e0-96c4-3583c9d0569e:60", "label": "LOCATED_IN", "to": "4:aec372e5-6358-48e0-96c4-3583c9d0569e:63"}, {"color": "#555555", "from": "4:aec372e5-6358-48e0-96c4-3583c9d0569e:61", "label": "TARGET", "to": "4:aec372e5-6358-48e0-96c4-3583c9d0569e:62"}, {"color": "#555555", "from": "4:aec372e5-6358-48e0-96c4-3583c9d0569e:61", "label": "AIMS_TO_REACH", "to": "4:aec372e5-6358-48e0-96c4-3583c9d0569e:114"}, {"color": "#555555", "from": "4:aec372e5-6358-48e0-96c4-3583c9d0569e:66", "label": "COLONIZE", "to": "4:aec372e5-6358-48e0-96c4-3583c9d0569e:480"}, {"color": "#555555", "from": "4:aec372e5-6358-48e0-96c4-3583c9d0569e:68", "label": "INFLUENCE", "to": "4:aec372e5-6358-48e0-96c4-3583c9d0569e:69"}, {"color": "#555555", "from": "4:aec372e5-6358-48e0-96c4-3583c9d0569e:77", "label": "IS", "to": "4:aec372e5-6358-48e0-96c4-3583c9d0569e:465"}, {"color": "#555555", "from": "4:aec372e5-6358-48e0-96c4-3583c9d0569e:465", "label": "PART_OF", "to": "4:aec372e5-6358-48e0-96c4-3583c9d0569e:467"}, {"color": "#555555", "from": "4:aec372e5-6358-48e0-96c4-3583c9d0569e:78", "label": "LEADER", "to": "4:aec372e5-6358-48e0-96c4-3583c9d0569e:478"}, {"color": "#555555", "from": "4:aec372e5-6358-48e0-96c4-3583c9d0569e:82", "label": "ORGANIZATION", "to": "4:aec372e5-6358-48e0-96c4-3583c9d0569e:435"}, {"color": "#555555", "from": "4:aec372e5-6358-48e0-96c4-3583c9d0569e:86", "label": "RELATED_TO", "to": "4:aec372e5-6358-48e0-96c4-3583c9d0569e:462"}, {"color": "#555555", "from": "4:aec372e5-6358-48e0-96c4-3583c9d0569e:462", "label": "OWNS", "to": "4:aec372e5-6358-48e0-96c4-3583c9d0569e:509"}, {"color": "#555555", "from": "4:aec372e5-6358-48e0-96c4-3583c9d0569e:462", "label": "OWNS", "to": "4:aec372e5-6358-48e0-96c4-3583c9d0569e:510"}, {"color": "#555555", "from": "4:aec372e5-6358-48e0-96c4-3583c9d0569e:87", "label": "RELATED_TO", "to": "4:aec372e5-6358-48e0-96c4-3583c9d0569e:462"}, {"color": "#555555", "from": "4:aec372e5-6358-48e0-96c4-3583c9d0569e:88", "label": "RELATED_TO", "to": "4:aec372e5-6358-48e0-96c4-3583c9d0569e:435"}, {"color": "#555555", "from": "4:aec372e5-6358-48e0-96c4-3583c9d0569e:89", "label": "RELATED_TO", "to": "4:aec372e5-6358-48e0-96c4-3583c9d0569e:512"}, {"color": "#555555", "from": "4:aec372e5-6358-48e0-96c4-3583c9d0569e:512", "label": "OWNS", "to": "4:aec372e5-6358-48e0-96c4-3583c9d0569e:513"}, {"color": "#555555", "from": "4:aec372e5-6358-48e0-96c4-3583c9d0569e:512", "label": "OWNS", "to": "4:aec372e5-6358-48e0-96c4-3583c9d0569e:514"}, {"color": "#555555", "from": "4:aec372e5-6358-48e0-96c4-3583c9d0569e:512", "label": "SUPPLIER", "to": "4:aec372e5-6358-48e0-96c4-3583c9d0569e:515"}, {"color": "#555555", "from": "4:aec372e5-6358-48e0-96c4-3583c9d0569e:91", "label": "RELATED_TO", "to": "4:aec372e5-6358-48e0-96c4-3583c9d0569e:90"}, {"color": "#555555", "from": "4:aec372e5-6358-48e0-96c4-3583c9d0569e:92", "label": "RELATED_TO", "to": "4:aec372e5-6358-48e0-96c4-3583c9d0569e:515"}, {"color": "#555555", "from": "4:aec372e5-6358-48e0-96c4-3583c9d0569e:515", "label": "USES", "to": "4:aec372e5-6358-48e0-96c4-3583c9d0569e:517"}, {"color": "#555555", "from": "4:aec372e5-6358-48e0-96c4-3583c9d0569e:515", "label": "OWNS", "to": "4:aec372e5-6358-48e0-96c4-3583c9d0569e:516"}, {"color": "#555555", "from": "4:aec372e5-6358-48e0-96c4-3583c9d0569e:93", "label": "RELATED_TO", "to": "4:aec372e5-6358-48e0-96c4-3583c9d0569e:515"}, {"color": "#555555", "from": "4:aec372e5-6358-48e0-96c4-3583c9d0569e:99", "label": "ORGANIZATION", "to": "4:aec372e5-6358-48e0-96c4-3583c9d0569e:435"}, {"color": "#555555", "from": "4:aec372e5-6358-48e0-96c4-3583c9d0569e:100", "label": "TARGET", "to": "4:aec372e5-6358-48e0-96c4-3583c9d0569e:560"}, {"color": "#555555", "from": "4:aec372e5-6358-48e0-96c4-3583c9d0569e:101", "label": "ENABLES", "to": "4:aec372e5-6358-48e0-96c4-3583c9d0569e:102"}, {"color": "#555555", "from": "4:aec372e5-6358-48e0-96c4-3583c9d0569e:106", "label": "STUDIED_ON", "to": "4:aec372e5-6358-48e0-96c4-3583c9d0569e:452"}, {"color": "#555555", "from": "4:aec372e5-6358-48e0-96c4-3583c9d0569e:452", "label": "LOCATED_IN", "to": "4:aec372e5-6358-48e0-96c4-3583c9d0569e:63"}, {"color": "#555555", "from": "4:aec372e5-6358-48e0-96c4-3583c9d0569e:107", "label": "LOCATED_ON", "to": "4:aec372e5-6358-48e0-96c4-3583c9d0569e:521"}, {"color": "#555555", "from": "4:aec372e5-6358-48e0-96c4-3583c9d0569e:107", "label": "REVEALED", "to": "4:aec372e5-6358-48e0-96c4-3583c9d0569e:108"}, {"color": "#555555", "from": "4:aec372e5-6358-48e0-96c4-3583c9d0569e:108", "label": "AIDS", "to": "4:aec372e5-6358-48e0-96c4-3583c9d0569e:590"}, {"color": "#555555", "from": "4:aec372e5-6358-48e0-96c4-3583c9d0569e:110", "label": "PRODUCED_BY", "to": "4:aec372e5-6358-48e0-96c4-3583c9d0569e:462"}, {"color": "#555555", "from": "4:aec372e5-6358-48e0-96c4-3583c9d0569e:112", "label": "CAUSES", "to": "4:aec372e5-6358-48e0-96c4-3583c9d0569e:111"}, {"color": "#555555", "from": "4:aec372e5-6358-48e0-96c4-3583c9d0569e:113", "label": "AVOIDANCE", "to": "4:aec372e5-6358-48e0-96c4-3583c9d0569e:111"}, {"color": "#555555", "from": "4:aec372e5-6358-48e0-96c4-3583c9d0569e:115", "label": "OCCURS_IN", "to": "4:aec372e5-6358-48e0-96c4-3583c9d0569e:65"}, {"color": "#555555", "from": "4:aec372e5-6358-48e0-96c4-3583c9d0569e:116", "label": "PARTICIPANT", "to": "4:aec372e5-6358-48e0-96c4-3583c9d0569e:115"}, {"color": "#555555", "from": "4:aec372e5-6358-48e0-96c4-3583c9d0569e:409", "label": "COMPETITOR", "to": "4:aec372e5-6358-48e0-96c4-3583c9d0569e:411"}, {"color": "#555555", "from": "4:aec372e5-6358-48e0-96c4-3583c9d0569e:409", "label": "COMPETITOR", "to": "4:aec372e5-6358-48e0-96c4-3583c9d0569e:412"}, {"color": "#555555", "from": "4:aec372e5-6358-48e0-96c4-3583c9d0569e:413", "label": "RELATED_TO", "to": "4:aec372e5-6358-48e0-96c4-3583c9d0569e:414"}, {"color": "#555555", "from": "4:aec372e5-6358-48e0-96c4-3583c9d0569e:414", "label": "RELATED_TO", "to": "4:aec372e5-6358-48e0-96c4-3583c9d0569e:102"}, {"color": "#555555", "from": "4:aec372e5-6358-48e0-96c4-3583c9d0569e:415", "label": "LED_BY", "to": "4:aec372e5-6358-48e0-96c4-3583c9d0569e:434"}, {"color": "#555555", "from": "4:aec372e5-6358-48e0-96c4-3583c9d0569e:415", "label": "USES", "to": "4:aec372e5-6358-48e0-96c4-3583c9d0569e:565"}, {"color": "#555555", "from": "4:aec372e5-6358-48e0-96c4-3583c9d0569e:415", "label": "ORGANIZATION", "to": "4:aec372e5-6358-48e0-96c4-3583c9d0569e:435"}, {"color": "#555555", "from": "4:aec372e5-6358-48e0-96c4-3583c9d0569e:415", "label": "AGENCY", "to": "4:aec372e5-6358-48e0-96c4-3583c9d0569e:484"}, {"color": "#555555", "from": "4:aec372e5-6358-48e0-96c4-3583c9d0569e:484", "label": "COUNTRY", "to": "4:aec372e5-6358-48e0-96c4-3583c9d0569e:485"}, {"color": "#555555", "from": "4:aec372e5-6358-48e0-96c4-3583c9d0569e:416", "label": "TECHNOLOGICAL_HERITAGE", "to": "4:aec372e5-6358-48e0-96c4-3583c9d0569e:417"}, {"color": "#555555", "from": "4:aec372e5-6358-48e0-96c4-3583c9d0569e:418", "label": "INFLUENCE", "to": "4:aec372e5-6358-48e0-96c4-3583c9d0569e:71"}, {"color": "#555555", "from": "4:aec372e5-6358-48e0-96c4-3583c9d0569e:418", "label": "INFLUENCE", "to": "4:aec372e5-6358-48e0-96c4-3583c9d0569e:419"}, {"color": "#555555", "from": "4:aec372e5-6358-48e0-96c4-3583c9d0569e:419", "label": "EXPLORE", "to": "4:aec372e5-6358-48e0-96c4-3583c9d0569e:420"}, {"color": "#555555", "from": "4:aec372e5-6358-48e0-96c4-3583c9d0569e:421", "label": "STUDIED", "to": "4:aec372e5-6358-48e0-96c4-3583c9d0569e:422"}, {"color": "#555555", "from": "4:aec372e5-6358-48e0-96c4-3583c9d0569e:423", "label": "INFLUENCED", "to": "4:aec372e5-6358-48e0-96c4-3583c9d0569e:421"}, {"color": "#555555", "from": "4:aec372e5-6358-48e0-96c4-3583c9d0569e:423", "label": "STUDIED", "to": "4:aec372e5-6358-48e0-96c4-3583c9d0569e:422"}, {"color": "#555555", "from": "4:aec372e5-6358-48e0-96c4-3583c9d0569e:424", "label": "DEVELOPED", "to": "4:aec372e5-6358-48e0-96c4-3583c9d0569e:432"}, {"color": "#555555", "from": "4:aec372e5-6358-48e0-96c4-3583c9d0569e:425", "label": "LED_TO", "to": "4:aec372e5-6358-48e0-96c4-3583c9d0569e:427"}, {"color": "#555555", "from": "4:aec372e5-6358-48e0-96c4-3583c9d0569e:425", "label": "LED_TO", "to": "4:aec372e5-6358-48e0-96c4-3583c9d0569e:428"}, {"color": "#555555", "from": "4:aec372e5-6358-48e0-96c4-3583c9d0569e:425", "label": "ORIGINATED_IN", "to": "4:aec372e5-6358-48e0-96c4-3583c9d0569e:426"}, {"color": "#555555", "from": "4:aec372e5-6358-48e0-96c4-3583c9d0569e:429", "label": "LOCATED_IN", "to": "4:aec372e5-6358-48e0-96c4-3583c9d0569e:434"}, {"color": "#555555", "from": "4:aec372e5-6358-48e0-96c4-3583c9d0569e:429", "label": "RELATED_TO", "to": "4:aec372e5-6358-48e0-96c4-3583c9d0569e:425"}, {"color": "#555555", "from": "4:aec372e5-6358-48e0-96c4-3583c9d0569e:429", "label": "PARTICIPATED_IN", "to": "4:aec372e5-6358-48e0-96c4-3583c9d0569e:427"}, {"color": "#555555", "from": "4:aec372e5-6358-48e0-96c4-3583c9d0569e:431", "label": "LAUNCHED_BY", "to": "4:aec372e5-6358-48e0-96c4-3583c9d0569e:430"}, {"color": "#555555", "from": "4:aec372e5-6358-48e0-96c4-3583c9d0569e:433", "label": "CAUSE_BY", "to": "4:aec372e5-6358-48e0-96c4-3583c9d0569e:431"}, {"color": "#555555", "from": "4:aec372e5-6358-48e0-96c4-3583c9d0569e:438", "label": "PARTICIPATED_IN", "to": "4:aec372e5-6358-48e0-96c4-3583c9d0569e:440"}, {"color": "#555555", "from": "4:aec372e5-6358-48e0-96c4-3583c9d0569e:439", "label": "PARTICIPATED_IN", "to": "4:aec372e5-6358-48e0-96c4-3583c9d0569e:440"}, {"color": "#555555", "from": "4:aec372e5-6358-48e0-96c4-3583c9d0569e:443", "label": "RELATED_TO", "to": "4:aec372e5-6358-48e0-96c4-3583c9d0569e:280"}, {"color": "#555555", "from": "4:aec372e5-6358-48e0-96c4-3583c9d0569e:445", "label": "RELATED_TO", "to": "4:aec372e5-6358-48e0-96c4-3583c9d0569e:72"}, {"color": "#555555", "from": "4:aec372e5-6358-48e0-96c4-3583c9d0569e:445", "label": "RELATED_TO", "to": "4:aec372e5-6358-48e0-96c4-3583c9d0569e:446"}, {"color": "#555555", "from": "4:aec372e5-6358-48e0-96c4-3583c9d0569e:446", "label": "RELATED_TO", "to": "4:aec372e5-6358-48e0-96c4-3583c9d0569e:72"}, {"color": "#555555", "from": "4:aec372e5-6358-48e0-96c4-3583c9d0569e:449", "label": "RELATED_TO", "to": "4:aec372e5-6358-48e0-96c4-3583c9d0569e:436"}, {"color": "#555555", "from": "4:aec372e5-6358-48e0-96c4-3583c9d0569e:449", "label": "BRIDGES", "to": "4:aec372e5-6358-48e0-96c4-3583c9d0569e:73"}, {"color": "#555555", "from": "4:aec372e5-6358-48e0-96c4-3583c9d0569e:451", "label": "PARTICIPANT", "to": "4:aec372e5-6358-48e0-96c4-3583c9d0569e:435"}, {"color": "#555555", "from": "4:aec372e5-6358-48e0-96c4-3583c9d0569e:451", "label": "PARTICIPANT", "to": "4:aec372e5-6358-48e0-96c4-3583c9d0569e:453"}, {"color": "#555555", "from": "4:aec372e5-6358-48e0-96c4-3583c9d0569e:451", "label": "PARTICIPANT", "to": "4:aec372e5-6358-48e0-96c4-3583c9d0569e:455"}, {"color": "#555555", "from": "4:aec372e5-6358-48e0-96c4-3583c9d0569e:451", "label": "PARTICIPANT", "to": "4:aec372e5-6358-48e0-96c4-3583c9d0569e:457"}, {"color": "#555555", "from": "4:aec372e5-6358-48e0-96c4-3583c9d0569e:451", "label": "PARTICIPANT", "to": "4:aec372e5-6358-48e0-96c4-3583c9d0569e:458"}, {"color": "#555555", "from": "4:aec372e5-6358-48e0-96c4-3583c9d0569e:453", "label": "OWNS", "to": "4:aec372e5-6358-48e0-96c4-3583c9d0569e:508"}, {"color": "#555555", "from": "4:aec372e5-6358-48e0-96c4-3583c9d0569e:453", "label": "PARTNER", "to": "4:aec372e5-6358-48e0-96c4-3583c9d0569e:452"}, {"color": "#555555", "from": "4:aec372e5-6358-48e0-96c4-3583c9d0569e:455", "label": "OWNS", "to": "4:aec372e5-6358-48e0-96c4-3583c9d0569e:83"}, {"color": "#555555", "from": "4:aec372e5-6358-48e0-96c4-3583c9d0569e:455", "label": "OPERATES", "to": "4:aec372e5-6358-48e0-96c4-3583c9d0569e:496"}, {"color": "#555555", "from": "4:aec372e5-6358-48e0-96c4-3583c9d0569e:455", "label": "COLLABORATES_WITH", "to": "4:aec372e5-6358-48e0-96c4-3583c9d0569e:435"}, {"color": "#555555", "from": "4:aec372e5-6358-48e0-96c4-3583c9d0569e:455", "label": "FOCUSES_ON", "to": "4:aec372e5-6358-48e0-96c4-3583c9d0569e:498"}, {"color": "#555555", "from": "4:aec372e5-6358-48e0-96c4-3583c9d0569e:455", "label": "FOCUSES_ON", "to": "4:aec372e5-6358-48e0-96c4-3583c9d0569e:499"}, {"color": "#555555", "from": "4:aec372e5-6358-48e0-96c4-3583c9d0569e:455", "label": "REPLACED_BY", "to": "4:aec372e5-6358-48e0-96c4-3583c9d0569e:497"}, {"color": "#555555", "from": "4:aec372e5-6358-48e0-96c4-3583c9d0569e:455", "label": "COLLABORATES_ON", "to": "4:aec372e5-6358-48e0-96c4-3583c9d0569e:500"}, {"color": "#555555", "from": "4:aec372e5-6358-48e0-96c4-3583c9d0569e:457", "label": "OWNS", "to": "4:aec372e5-6358-48e0-96c4-3583c9d0569e:506"}, {"color": "#555555", "from": "4:aec372e5-6358-48e0-96c4-3583c9d0569e:457", "label": "RELATED_PROJECT", "to": "4:aec372e5-6358-48e0-96c4-3583c9d0569e:507"}, {"color": "#555555", "from": "4:aec372e5-6358-48e0-96c4-3583c9d0569e:464", "label": "PREDECESSOR", "to": "4:aec372e5-6358-48e0-96c4-3583c9d0569e:76"}, {"color": "#555555", "from": "4:aec372e5-6358-48e0-96c4-3583c9d0569e:464", "label": "PREDECESSOR", "to": "4:aec372e5-6358-48e0-96c4-3583c9d0569e:466"}, {"color": "#555555", "from": "4:aec372e5-6358-48e0-96c4-3583c9d0569e:468", "label": "PRECEDES", "to": "4:aec372e5-6358-48e0-96c4-3583c9d0569e:466"}, {"color": "#555555", "from": "4:aec372e5-6358-48e0-96c4-3583c9d0569e:474", "label": "LOCATED_IN", "to": "4:aec372e5-6358-48e0-96c4-3583c9d0569e:473"}, {"color": "#555555", "from": "4:aec372e5-6358-48e0-96c4-3583c9d0569e:474", "label": "RELATED_TO", "to": "4:aec372e5-6358-48e0-96c4-3583c9d0569e:414"}, {"color": "#555555", "from": "4:aec372e5-6358-48e0-96c4-3583c9d0569e:477", "label": "LEADER", "to": "4:aec372e5-6358-48e0-96c4-3583c9d0569e:478"}, {"color": "#555555", "from": "4:aec372e5-6358-48e0-96c4-3583c9d0569e:479", "label": "TARGET", "to": "4:aec372e5-6358-48e0-96c4-3583c9d0569e:480"}, {"color": "#555555", "from": "4:aec372e5-6358-48e0-96c4-3583c9d0569e:481", "label": "TARGET", "to": "4:aec372e5-6358-48e0-96c4-3583c9d0569e:420"}, {"color": "#555555", "from": "4:aec372e5-6358-48e0-96c4-3583c9d0569e:481", "label": "COUNTRY", "to": "4:aec372e5-6358-48e0-96c4-3583c9d0569e:482"}, {"color": "#555555", "from": "4:aec372e5-6358-48e0-96c4-3583c9d0569e:486", "label": "ORGANIZATION", "to": "4:aec372e5-6358-48e0-96c4-3583c9d0569e:435"}, {"color": "#555555", "from": "4:aec372e5-6358-48e0-96c4-3583c9d0569e:486", "label": "AGENCY", "to": "4:aec372e5-6358-48e0-96c4-3583c9d0569e:484"}, {"color": "#555555", "from": "4:aec372e5-6358-48e0-96c4-3583c9d0569e:487", "label": "SAME_AS", "to": "4:aec372e5-6358-48e0-96c4-3583c9d0569e:554"}, {"color": "#555555", "from": "4:aec372e5-6358-48e0-96c4-3583c9d0569e:487", "label": "OBSERVED", "to": "4:aec372e5-6358-48e0-96c4-3583c9d0569e:555"}, {"color": "#555555", "from": "4:aec372e5-6358-48e0-96c4-3583c9d0569e:487", "label": "AGENCY", "to": "4:aec372e5-6358-48e0-96c4-3583c9d0569e:484"}, {"color": "#555555", "from": "4:aec372e5-6358-48e0-96c4-3583c9d0569e:488", "label": "ORGANIZATION", "to": "4:aec372e5-6358-48e0-96c4-3583c9d0569e:435"}, {"color": "#555555", "from": "4:aec372e5-6358-48e0-96c4-3583c9d0569e:488", "label": "AGENCY", "to": "4:aec372e5-6358-48e0-96c4-3583c9d0569e:484"}, {"color": "#555555", "from": "4:aec372e5-6358-48e0-96c4-3583c9d0569e:489", "label": "ORGANIZATION", "to": "4:aec372e5-6358-48e0-96c4-3583c9d0569e:435"}, {"color": "#555555", "from": "4:aec372e5-6358-48e0-96c4-3583c9d0569e:489", "label": "AGENCY", "to": "4:aec372e5-6358-48e0-96c4-3583c9d0569e:484"}, {"color": "#555555", "from": "4:aec372e5-6358-48e0-96c4-3583c9d0569e:491", "label": "ORGANIZATION", "to": "4:aec372e5-6358-48e0-96c4-3583c9d0569e:492"}, {"color": "#555555", "from": "4:aec372e5-6358-48e0-96c4-3583c9d0569e:491", "label": "AGENCY", "to": "4:aec372e5-6358-48e0-96c4-3583c9d0569e:490"}, {"color": "#555555", "from": "4:aec372e5-6358-48e0-96c4-3583c9d0569e:492", "label": "COMPETITOR", "to": "4:aec372e5-6358-48e0-96c4-3583c9d0569e:435"}, {"color": "#555555", "from": "4:aec372e5-6358-48e0-96c4-3583c9d0569e:492", "label": "LOCATED_IN", "to": "4:aec372e5-6358-48e0-96c4-3583c9d0569e:478"}, {"color": "#555555", "from": "4:aec372e5-6358-48e0-96c4-3583c9d0569e:492", "label": "OPERATES", "to": "4:aec372e5-6358-48e0-96c4-3583c9d0569e:493"}, {"color": "#555555", "from": "4:aec372e5-6358-48e0-96c4-3583c9d0569e:492", "label": "OPERATES", "to": "4:aec372e5-6358-48e0-96c4-3583c9d0569e:494"}, {"color": "#555555", "from": "4:aec372e5-6358-48e0-96c4-3583c9d0569e:494", "label": "TARGET", "to": "4:aec372e5-6358-48e0-96c4-3583c9d0569e:495"}, {"color": "#555555", "from": "4:aec372e5-6358-48e0-96c4-3583c9d0569e:494", "label": "LAUNCHED_BY", "to": "4:aec372e5-6358-48e0-96c4-3583c9d0569e:551"}, {"color": "#555555", "from": "4:aec372e5-6358-48e0-96c4-3583c9d0569e:494", "label": "TARGET", "to": "4:aec372e5-6358-48e0-96c4-3583c9d0569e:552"}, {"color": "#555555", "from": "4:aec372e5-6358-48e0-96c4-3583c9d0569e:494", "label": "COUNTRY", "to": "4:aec372e5-6358-48e0-96c4-3583c9d0569e:478"}, {"color": "#555555", "from": "4:aec372e5-6358-48e0-96c4-3583c9d0569e:501", "label": "RELATED_TO", "to": "4:aec372e5-6358-48e0-96c4-3583c9d0569e:502"}, {"color": "#555555", "from": "4:aec372e5-6358-48e0-96c4-3583c9d0569e:501", "label": "RELATED_TO", "to": "4:aec372e5-6358-48e0-96c4-3583c9d0569e:503"}, {"color": "#555555", "from": "4:aec372e5-6358-48e0-96c4-3583c9d0569e:501", "label": "RELATED_PROJECT", "to": "4:aec372e5-6358-48e0-96c4-3583c9d0569e:84"}, {"color": "#555555", "from": "4:aec372e5-6358-48e0-96c4-3583c9d0569e:501", "label": "RELATED_PROJECT", "to": "4:aec372e5-6358-48e0-96c4-3583c9d0569e:85"}, {"color": "#555555", "from": "4:aec372e5-6358-48e0-96c4-3583c9d0569e:504", "label": "COLLABORATION", "to": "4:aec372e5-6358-48e0-96c4-3583c9d0569e:435"}, {"color": "#555555", "from": "4:aec372e5-6358-48e0-96c4-3583c9d0569e:504", "label": "MAPPING", "to": "4:aec372e5-6358-48e0-96c4-3583c9d0569e:505"}, {"color": "#555555", "from": "4:aec372e5-6358-48e0-96c4-3583c9d0569e:511", "label": "CONTRACTOR", "to": "4:aec372e5-6358-48e0-96c4-3583c9d0569e:462"}, {"color": "#555555", "from": "4:aec372e5-6358-48e0-96c4-3583c9d0569e:518", "label": "DEVELOPS", "to": "4:aec372e5-6358-48e0-96c4-3583c9d0569e:519"}, {"color": "#555555", "from": "4:aec372e5-6358-48e0-96c4-3583c9d0569e:518", "label": "SERVES", "to": "4:aec372e5-6358-48e0-96c4-3583c9d0569e:520"}, {"color": "#555555", "from": "4:aec372e5-6358-48e0-96c4-3583c9d0569e:519", "label": "ROTATION_TO", "to": "4:aec372e5-6358-48e0-96c4-3583c9d0569e:521"}, {"color": "#555555", "from": "4:aec372e5-6358-48e0-96c4-3583c9d0569e:520", "label": "AFFECTS", "to": "4:aec372e5-6358-48e0-96c4-3583c9d0569e:44"}, {"color": "#555555", "from": "4:aec372e5-6358-48e0-96c4-3583c9d0569e:523", "label": "USED_FOR", "to": "4:aec372e5-6358-48e0-96c4-3583c9d0569e:524"}, {"color": "#555555", "from": "4:aec372e5-6358-48e0-96c4-3583c9d0569e:523", "label": "REPLACES", "to": "4:aec372e5-6358-48e0-96c4-3583c9d0569e:526"}, {"color": "#555555", "from": "4:aec372e5-6358-48e0-96c4-3583c9d0569e:526", "label": "PART_OF", "to": "4:aec372e5-6358-48e0-96c4-3583c9d0569e:524"}, {"color": "#555555", "from": "4:aec372e5-6358-48e0-96c4-3583c9d0569e:528", "label": "LOCATED_IN", "to": "4:aec372e5-6358-48e0-96c4-3583c9d0569e:94"}, {"color": "#555555", "from": "4:aec372e5-6358-48e0-96c4-3583c9d0569e:528", "label": "LOCATED_IN", "to": "4:aec372e5-6358-48e0-96c4-3583c9d0569e:529"}, {"color": "#555555", "from": "4:aec372e5-6358-48e0-96c4-3583c9d0569e:528", "label": "LAUNCHED_BY", "to": "4:aec372e5-6358-48e0-96c4-3583c9d0569e:527"}, {"color": "#555555", "from": "4:aec372e5-6358-48e0-96c4-3583c9d0569e:530", "label": "LAUNCHED_BY", "to": "4:aec372e5-6358-48e0-96c4-3583c9d0569e:527"}, {"color": "#555555", "from": "4:aec372e5-6358-48e0-96c4-3583c9d0569e:531", "label": "LOCATED_IN", "to": "4:aec372e5-6358-48e0-96c4-3583c9d0569e:95"}, {"color": "#555555", "from": "4:aec372e5-6358-48e0-96c4-3583c9d0569e:531", "label": "PARTICIPATES_IN", "to": "4:aec372e5-6358-48e0-96c4-3583c9d0569e:535"}, {"color": "#555555", "from": "4:aec372e5-6358-48e0-96c4-3583c9d0569e:532", "label": "LOCATED_IN", "to": "4:aec372e5-6358-48e0-96c4-3583c9d0569e:96"}]);
+
+                  nodeColors = {};
+                  allNodes = nodes.get({ returnType: "Object" });
+                  for (nodeId in allNodes) {
+                    nodeColors[nodeId] = allNodes[nodeId].color;
+                  }
+                  allEdges = edges.get({ returnType: "Object" });
+                  // adding nodes and edges to the graph
+                  data = {nodes: nodes, edges: edges};
+
+                  var options = {
+    "configure": {
+        "enabled": false
+    },
+    "edges": {
+        "color": {
+            "inherit": true
+        },
+        "smooth": {
+            "enabled": true,
+            "type": "dynamic"
+        }
+    },
+    "interaction": {
+        "dragNodes": true,
+        "hideEdgesOnDrag": false,
+        "hideNodesOnDrag": false
+    },
+    "physics": {
+        "enabled": true,
+        "forceAtlas2Based": {
+            "avoidOverlap": 0,
+            "centralGravity": 0.01,
+            "damping": 0.4,
+            "gravitationalConstant": -50,
+            "springConstant": 0.08,
+            "springLength": 100
+        },
+        "solver": "forceAtlas2Based",
+        "stabilization": {
+            "enabled": true,
+            "fit": true,
+            "iterations": 1000,
+            "onlyDynamicEdges": false,
+            "updateInterval": 50
+        }
+    }
+};
+
+                  
+
+
+                  
+
+                  network = new vis.Network(container, data, options);
+
+                  
+
+                  
+
+                  
+
+
+                  
+                      network.on("stabilizationProgress", function(params) {
+                          document.getElementById('loadingBar').removeAttribute("style");
+                          var maxWidth = 496;
+                          var minWidth = 20;
+                          var widthFactor = params.iterations/params.total;
+                          var width = Math.max(minWidth,maxWidth * widthFactor);
+                          document.getElementById('bar').style.width = width + 'px';
+                          document.getElementById('text').innerHTML = Math.round(widthFactor*100) + '%';
+                      });
+                      network.once("stabilizationIterationsDone", function() {
+                          document.getElementById('text').innerHTML = '100%';
+                          document.getElementById('bar').style.width = '496px';
+                          document.getElementById('loadingBar').style.opacity = 0;
+                          // really clean the dom element
+                          setTimeout(function () {document.getElementById('loadingBar').style.display = 'none';}, 500);
+                      });
+                  
+
+                  return network;
+
+              }
+              drawGraph();
+        </script>
+    </body>
+</html>
